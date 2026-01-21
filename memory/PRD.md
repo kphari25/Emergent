@@ -1,19 +1,21 @@
 # AyurCare Pro - Ayurvedic Hospital Management System
 
 ## Original Problem Statement
-Build a program for an Ayurvedic hospital with inventory management, IP and OP check-in, including reporting, billing, patient scheduling, and inventory analytics for fast-moving vs slow-moving medicines decision making.
+Build a program for an Ayurvedic hospital with inventory management, IP and OP check-in, including reporting, billing, patient scheduling, inventory analytics for fast-moving vs slow-moving medicines, financial reports with profit/loss, and HR module with staff salary management.
 
 ## Architecture
 - **Frontend**: React 19 + Tailwind CSS + shadcn/ui components
 - **Backend**: FastAPI (Python) with JWT authentication
-- **Database**: MongoDB (collections: users, patients, inventory, appointments, bills, rooms, payments, checkin_history, inventory_movements)
+- **Database**: MongoDB (collections: users, patients, inventory, appointments, bills, rooms, payments, checkin_history, inventory_movements, staff, salary_payments, expenses)
 
 ## User Personas
-1. **Admin**: Full access to all modules, user management
+1. **Admin**: Full access to all modules, user management, HR, financial reports
 2. **Doctor**: Patient management, appointments, prescriptions
 3. **Staff**: Patient check-in/out, billing, inventory operations
 
 ## Core Requirements (Implemented)
+
+### Phase 1 - MVP (Complete)
 - [x] User Authentication (JWT-based with role management)
 - [x] Patient Management (CRUD, medical history, Prakriti)
 - [x] IP Check-in with room assignment
@@ -24,9 +26,27 @@ Build a program for an Ayurvedic hospital with inventory management, IP and OP c
 - [x] Appointment Scheduling with doctor assignment
 - [x] Billing & Payment tracking
 - [x] Dashboard with key metrics
-- [x] Reports (Inventory Analytics, Revenue Reports)
 
-## What's Been Implemented (January 21, 2026)
+### Phase 2 - Enhanced Reports & HR (Complete - January 21, 2026)
+- [x] Financial Report with:
+  - Total IP Patient count (historical + current)
+  - Total OP Patient count (historical + current)
+  - Revenue breakdown (Medicine Sales, Treatment, Room Charges)
+  - Expense tracking with categories
+  - Profit/Loss calculation (Gross & Net)
+- [x] HR Module:
+  - Staff management (Add, View, Edit, Deactivate)
+  - Salary payment recording
+  - Salary history per staff
+  - Monthly salary summary
+  - Department & role filtering
+- [x] Expense Management:
+  - Add expenses by category (utilities, maintenance, supplies, etc.)
+  - View expense history
+  - Expense breakdown in reports
+
+## What's Been Implemented
+
 ### Backend APIs
 - Auth: Register, Login, Get Current User
 - Patients: CRUD, Check-in (IP/OP), Check-out
@@ -34,7 +54,9 @@ Build a program for an Ayurvedic hospital with inventory management, IP and OP c
 - Appointments: CRUD, Status updates
 - Billing: Create bills, Record payments
 - Rooms: Create, List, Available rooms
-- Reports: Dashboard stats, Inventory analytics, Revenue reports
+- Staff: CRUD, Salary payments
+- Expenses: CRUD
+- Reports: Dashboard stats, Inventory analytics, Revenue reports, Financial report, HR summary
 
 ### Frontend Pages
 - Login/Register with split-screen design
@@ -43,7 +65,8 @@ Build a program for an Ayurvedic hospital with inventory management, IP and OP c
 - Inventory management with stock updates
 - Appointments calendar view
 - Billing with payment recording
-- Reports with Inventory Analytics and Revenue tabs
+- HR Management with staff list and salary payments
+- Reports with Financial, Inventory Analytics, and Expenses tabs
 
 ## Prioritized Backlog
 
@@ -51,26 +74,29 @@ Build a program for an Ayurvedic hospital with inventory management, IP and OP c
 - None remaining
 
 ### P1 (Important - Future)
-- Doctor schedule management
 - Prescription management
-- Medicine dispensing from inventory
-- Patient treatment history
-- Multi-language support
+- Doctor schedule management
+- Automated low-stock alerts
+- Report export (PDF/Excel)
 
 ### P2 (Nice to Have)
 - Email/SMS notifications
-- Report export (PDF/Excel)
 - Patient portal
-- Inventory alerts and reordering
 - Integration with external lab systems
+- Multi-language support
 
 ## Test Credentials
 - Admin: admin@ayurcare.com / admin123
 - Doctor: dr.sharma@ayurcare.com / doctor123
 
+## Sample Data Created
+- 3 Staff members (Dr. Priya Sharma, Rahul Kumar, Meera Patel)
+- 4 Rooms (101, 102, 201, 301)
+- 5 Inventory items (Ayurvedic medicines)
+- Sample expenses
+
 ## Next Tasks
-1. Add prescription management feature
+1. Add prescription management
 2. Implement doctor schedule view
-3. Add low-stock alerts/notifications
-4. Export reports to PDF
-5. Add patient treatment timeline
+3. Add low-stock alerts
+4. Export reports to PDF/Excel
