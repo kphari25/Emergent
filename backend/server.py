@@ -775,7 +775,8 @@ async def create_staff(staff: StaffCreate, current_user: dict = Depends(get_curr
         'created_at': datetime.now(timezone.utc).isoformat()
     }
     await db.staff.insert_one(staff_doc)
-    return staff_doc
+    # Return without _id
+    return await db.staff.find_one({'id': staff_id}, {'_id': 0})
 
 @api_router.get("/staff")
 async def get_staff(department: Optional[str] = None, current_user: dict = Depends(get_current_user)):
