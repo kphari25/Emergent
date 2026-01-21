@@ -1,0 +1,160 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "AyurCare Pro",
+      "archetype": "Organic & Earthy (Modern Ayurveda)",
+      "tone": "Professional, Healing, Natural, Efficient",
+      "theme_mode": "light"
+    },
+    "typography": {
+      "font_family": {
+        "headings": "Playfair Display, serif",
+        "body": "Manrope, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "scale": {
+        "h1": "text-4xl md:text-5xl font-bold tracking-tight",
+        "h2": "text-3xl font-semibold tracking-tight",
+        "h3": "text-2xl font-medium",
+        "body_lg": "text-lg leading-relaxed",
+        "body_base": "text-base leading-relaxed",
+        "caption": "text-sm text-muted-foreground tracking-wide uppercase"
+      },
+      "rules": [
+        "Use Playfair Display ONLY for main page titles and major section headers.",
+        "Use Manrope for all data tables, inputs, and body text.",
+        "Headings must use tight tracking (-0.02em).",
+        "Captions and labels must be uppercase with wide tracking (0.05em)."
+      ]
+    },
+    "colors": {
+      "palette": {
+        "primary": {
+          "DEFAULT": "#3A5A40",
+          "foreground": "#FFFFFF",
+          "description": "Deep Hunter Green - Authority & Nature"
+        },
+        "secondary": {
+          "DEFAULT": "#DAD7CD",
+          "foreground": "#3A5A40",
+          "description": "Sage Grey - Soft backgrounds"
+        },
+        "accent": {
+          "DEFAULT": "#BC4749",
+          "foreground": "#FFFFFF",
+          "description": "Muted Terracotta - Actions & Alerts"
+        },
+        "background": {
+          "DEFAULT": "#FDFCF8",
+          "description": "Warm Off-White/Bone - Avoids clinical harshness"
+        },
+        "foreground": {
+          "DEFAULT": "#1A1C18",
+          "description": "Dark Green-Black - Softer than pure black"
+        },
+        "muted": {
+          "DEFAULT": "#F3F4F6",
+          "foreground": "#6B7280"
+        },
+        "border": "#E2E8F0",
+        "input": "#E2E8F0",
+        "ring": "#3A5A40"
+      },
+      "status": {
+        "success": "#588157",
+        "warning": "#D4A373",
+        "error": "#BC4749",
+        "info": "#A3B18A"
+      },
+      "inventory_analytics": {
+        "fast_moving": "#588157",
+        "slow_moving": "#D4A373",
+        "dead_stock": "#BC4749"
+      }
+    },
+    "layout": {
+      "spacing_scale": "Generous (p-6, p-8, p-12)",
+      "container_padding": "px-4 md:px-8 lg:px-12",
+      "border_radius": {
+        "default": "rounded-xl",
+        "card": "rounded-xl",
+        "button": "rounded-full"
+      },
+      "grids": {
+        "dashboard": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
+        "marketing": "grid grid-cols-1 md:grid-cols-12 gap-8"
+      }
+    },
+    "components": {
+      "cards": {
+        "style": "bg-white border border-border/60 shadow-sm hover:shadow-md transition-all duration-300",
+        "padding": "p-6"
+      },
+      "buttons": {
+        "primary": "bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-6 py-2 font-medium transition-transform active:scale-95",
+        "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-full px-6 py-2 font-medium",
+        "outline": "border-2 border-primary text-primary hover:bg-primary/5 rounded-full px-6 py-2 font-medium"
+      },
+      "inputs": {
+        "style": "bg-background border-input focus:ring-2 focus:ring-primary/20 rounded-lg h-11"
+      },
+      "navigation": {
+        "sidebar": "bg-[#344E41] text-white w-64 hidden md:flex flex-col",
+        "sidebar_link": "flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 transition-colors text-sm font-medium",
+        "sidebar_link_active": "bg-white/20 text-white"
+      }
+    },
+    "visual_enhancers": {
+      "glassmorphism": "backdrop-blur-md bg-white/70 border border-white/20 shadow-lg",
+      "gradients": "None. Use solid earthy tones or very subtle noise textures.",
+      "shadows": "shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
+      "textures": "Use subtle grain on the main background if possible to enhance the 'organic' feel."
+    },
+    "assets": {
+      "images": {
+        "login_bg": "https://images.unsplash.com/photo-1764727291644-5dcb0b1a0375?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBob3NwaXRhbCUyMHJlY2VwdGlvbiUyMGJyaWdodHxlbnwwfHx8fDE3NjkwMzA1ODZ8MA&ixlib=rb-4.1.0&q=85",
+        "doctor_avatar": "https://images.unsplash.com/photo-1615177393114-bd2917a4f74a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwyfHxkb2N0b3IlMjBwb3J0cmFpdCUyMHByb2Zlc3Npb25hbHxlbnwwfHx8fDE3Njg5NTc3NTJ8MA&ixlib=rb-4.1.0&q=85",
+        "medicine_inventory": "https://images.unsplash.com/photo-1671493234884-b1611bcf3e69?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODd8MHwxfHNlYXJjaHw0fHxheXVydmVkaWMlMjBoZXJicyUyMG1lZGljaW5lJTIwYm90dGxlc3xlbnwwfHx8fDE3NjkwMzA1ODR8MA&ixlib=rb-4.1.0&q=85",
+        "logo_placeholder": "https://via.placeholder.com/150x50?text=AyurCare"
+      },
+      "icons": {
+        "library": "lucide-react",
+        "style": "Stroke width 1.5px, rounded joins"
+      }
+    },
+    "instructions_to_main_agent": {
+      "general": [
+        "Implement the 'Organic & Earthy' theme strictly. Avoid default blue/purple SaaS colors.",
+        "Use 'Playfair Display' for all H1-H3 headings to give the Ayurvedic premium feel.",
+        "Ensure the dashboard uses the 'Bento Grid' layout (Mode B) for high density data but with generous internal padding.",
+        "Inventory Analytics must visually distinguish Fast vs Slow moving goods using the specified color codes.",
+        "Use Shadcn components but override the default radius to 'rounded-xl' and use the custom color palette.",
+        "All interactive elements must have `data-testid` attributes."
+      ],
+      "specific_pages": {
+        "login": "Split screen. Left side: Login form with 'Playfair Display' welcome text. Right side: High-quality hospital/herb image with an earthy overlay.",
+        "dashboard": "Top row: Key metrics (Patients, Revenue, Inventory Health). Middle: Split view of Appointments (Calendar) and Fast/Slow Moving Goods (Chart). Bottom: Recent Activity.",
+        "inventory": "Table view with status badges (Fast/Slow). Use 'lucide-react' icons for categories (Leaf for herbs, Pill for medicines).",
+        "ip_op_checkin": "Clean forms with clear separation between IP (Room selection) and OP (Token generation)."
+      }
+    },
+    "universal_guidelines": [
+      "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+      "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+      "Create depth through layered design elements with z-index hierarchy",
+      "Use glass-morphism effects with backdrop filters (12-24px blur)",
+      "You MUST NOT apply universal transition. Eg: `transition: all`. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms",
+      "You MUST NOT center align the app container, ie do not add `.App { text-align: center; }` in the css file. This disrupts the human natural reading flow of text",
+      "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
+      "NEVER: use AI assistant Emoji characters like 🤖🧠 etc for icons.",
+      "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+      "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+      "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+      "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN",
+      "Prioritize using pre-existing components from src/components/ui when applicable",
+      "Components MUST use named exports (export const ComponentName = ...)",
+      "Pages MUST use default exports (export default function PageName() {...})",
+      "Use `sonner` for toasts"
+    ]
+  }
+}
