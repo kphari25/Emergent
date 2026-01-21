@@ -57,7 +57,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="page-header">
         <h1 className="page-title">Dashboard</h1>
-        <p className="page-subtitle">Welcome to AyurCare Pro Hospital Management</p>
+        <p className="page-subtitle">Welcome to Tatva Ayurved Hospital Management</p>
       </div>
 
       {/* Metric Cards */}
