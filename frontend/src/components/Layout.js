@@ -10,7 +10,8 @@ import {
   LogOut,
   Leaf,
   Menu,
-  X
+  X,
+  UserCog
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ const navItems = [
   { path: '/inventory', label: 'Inventory', icon: Package },
   { path: '/appointments', label: 'Appointments', icon: Calendar },
   { path: '/billing', label: 'Billing', icon: Receipt },
+  { path: '/hr', label: 'HR', icon: UserCog },
   { path: '/reports', label: 'Reports', icon: BarChart3 },
 ];
 
