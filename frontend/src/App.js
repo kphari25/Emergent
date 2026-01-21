@@ -9,6 +9,7 @@ import Inventory from "@/pages/Inventory";
 import Appointments from "@/pages/Appointments";
 import Billing from "@/pages/Billing";
 import Reports from "@/pages/Reports";
+import HR from "@/pages/HR";
 import Layout from "@/components/Layout";
 
 const ProtectedRoute = ({ children }) => {
@@ -47,6 +48,7 @@ function App() {
                     <Route path="appointments" element={<Appointments />} />
                     <Route path="billing" element={<Billing />} />
                     <Route path="reports" element={<Reports />} />
+                    <Route path="hr" element={<HR />} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>
