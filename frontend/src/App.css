@@ -1,34 +1,248 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
-}
+/* AyurCare Pro - Main Styles */
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
-}
-
-.App-header {
-    background-color: #0f0f10;
+/* Layout Container */
+.app-container {
+    display: flex;
     min-height: 100vh;
+}
+
+/* Main Content Area */
+.main-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    background-color: hsl(45 33% 98%);
+}
+
+/* Page Header */
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.25rem;
+    font-weight: 600;
+    color: #1A1C18;
+    margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+    color: #6B7280;
+    font-size: 1rem;
+}
+
+/* Metric Cards */
+.metric-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #3A5A40;
+    line-height: 1;
+}
+
+.metric-label {
+    font-size: 0.875rem;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.5rem;
+}
+
+/* Data Tables */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6B7280;
+    border-bottom: 1px solid #E2E8F0;
+    background-color: #F9FAFB;
+}
+
+.data-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #E2E8F0;
+}
+
+.data-table tbody tr:hover {
+    background-color: #F9FAFB;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #E2E8F0;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    background: white;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-input:focus {
+    border-color: #3A5A40;
+    box-shadow: 0 0 0 3px rgba(58, 90, 64, 0.1);
+}
+
+/* Status Indicators */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-active {
+    background-color: rgba(88, 129, 87, 0.1);
+    color: #588157;
+}
+
+.status-pending {
+    background-color: rgba(212, 163, 115, 0.1);
+    color: #D4A373;
+}
+
+.status-urgent {
+    background-color: rgba(188, 71, 73, 0.1);
+    color: #BC4749;
+}
+
+/* Chart Container */
+.chart-container {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    border: 1px solid #E2E8F0;
+}
+
+/* Login Page Specific */
+.login-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+.login-form-section {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
     justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+    padding: 3rem;
+    background-color: #FDFCF8;
 }
 
-.App-link {
-    color: #61dafb;
+.login-image-section {
+    flex: 1;
+    position: relative;
+    display: none;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
+@media (min-width: 768px) {
+    .login-image-section {
+        display: block;
     }
-    to {
-        transform: rotate(360deg);
+}
+
+.login-image-section img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.login-image-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(58, 90, 64, 0.7) 0%, rgba(52, 78, 65, 0.8) 100%);
+}
+
+/* Loading Spinner */
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(58, 90, 64, 0.2);
+    border-top-color: #3A5A40;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #6B7280;
+}
+
+.empty-state-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    color: #D1D5DB;
+}
+
+/* Toast Customization */
+[data-sonner-toaster] {
+    font-family: 'Manrope', sans-serif;
+}
+
+/* Calendar Day Selected */
+.rdp-day_selected {
+    background-color: #3A5A40 !important;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .main-content {
+        padding: 1rem;
+    }
+    
+    .page-title {
+        font-size: 1.75rem;
+    }
+    
+    .metric-card {
+        padding: 1rem;
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
     }
 }
