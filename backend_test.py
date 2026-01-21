@@ -463,6 +463,181 @@ class AyurCareAPITester:
             self.log_result("Revenue Report", False, f"Status: {status}, Response: {response}")
             return False
 
+    def test_financial_report(self):
+        """Test financial report with IP/OP counts, revenue breakdown, expenses, profit/loss"""
+        success, response, status = self.make_request('GET', 'reports/financial', expected_status=200)
+        if success and 'patients' in response and 'revenue' in response and 'expenses' in response and 'profit_loss' in response:
+            # Check if it has the required fields
+            patients = response.get('patients', {})
+            revenue = response.get('revenue', {})
+            expenses = response.get('expenses', {})
+            profit_loss = response.get('profit_loss', {})
+            
+            required_patient_fields = ['total_ip_checkins', 'total_op_checkins', 'current_ip', 'current_op']
+            required_revenue_fields = ['medicine_sales', 'treatment_revenue', 'room_revenue', 'collected']
+            required_expense_fields = ['operational', 'salaries', 'total']
+            required_profit_fields = ['net_profit', 'is_profit']
+            
+            missing_fields = []
+            for field in required_patient_fields:
+                if field not in patients:
+                    missing_fields.append(f"patients.{field}")
+            for field in required_revenue_fields:
+                if field not in revenue:
+                    missing_fields.append(f"revenue.{field}")
+            for field in required_expense_fields:
+                if field not in expenses:
+                    missing_fields.append(f"expenses.{field}")
+            for field in required_profit_fields:
+                if field not in profit_loss:
+                    missing_fields.append(f"profit_loss.{field}")
+            
+            if missing_fields:
+                self.log_result("Financial Report", False, f"Missing fields: {missing_fields}")
+                return False
+            else:
+                self.log_result("Financial Report", True)
+                return True
+        else:
+            self.log_result("Financial Report", False, f"Status: {status}, Response: {response}")
+            return False
+
+    # ==================== HR/STAFF TESTS ====================
+    
+    def test_create_staff(self):
+        """Test staff creation"""
+        data = {
+            "name": "Test Staff Member",
+            "email": f"staff_test_{datetime.now().strftime('%H%M%S')}@ayurcare.com",
+            "phone": "9876543211",
+            "role": "nurse",
+            "department": "Ayurveda",
+            "designation": "Senior Nurse",
+            "salary": 35000.0,
+            "join_date": datetime.now().strftime('%Y-%m-%d'),
+            "address": "123 Staff Colony, Test City"
+        }
+        
+        success, response, status = self.make_request('POST', 'staff', data, 200)
+        if success and 'id' in response:
+            self.test_staff_id = response['id']
+            self.log_result("Create Staff", True)
+            return True
+        else:
+            self.log_result("Create Staff", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_get_staff(self):
+        """Test getting staff list"""
+        success, response, status = self.make_request('GET', 'staff', expected_status=200)
+        if success and isinstance(response, list):
+            self.log_result("Get Staff List", True)
+            # If we don't have a test staff, use the first one from the list
+            if not hasattr(self, 'test_staff_id') and len(response) > 0:
+                self.test_staff_id = response[0]['id']
+            return True
+        else:
+            self.log_result("Get Staff List", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_get_staff_by_department(self):
+        """Test getting staff by department"""
+        success, response, status = self.make_request('GET', 'staff?department=Ayurveda', expected_status=200)
+        if success and isinstance(response, list):
+            self.log_result("Get Staff by Department", True)
+            return True
+        else:
+            self.log_result("Get Staff by Department", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_record_salary_payment(self):
+        """Test recording salary payment"""
+        if not hasattr(self, 'test_staff_id') or not self.test_staff_id:
+            self.log_result("Record Salary Payment", False, "No test staff ID available")
+            return False
+            
+        data = {
+            "staff_id": self.test_staff_id,
+            "month": datetime.now().strftime('%Y-%m'),
+            "amount": 35000.0,
+            "bonus": 2000.0,
+            "deductions": 1000.0,
+            "payment_date": datetime.now().strftime('%Y-%m-%d'),
+            "payment_method": "bank_transfer",
+            "notes": "Test salary payment"
+        }
+        
+        success, response, status = self.make_request('POST', 'staff/salary-payment', data, 200)
+        if success and 'id' in response and 'net_amount' in response:
+            self.test_salary_payment_id = response['id']
+            self.log_result("Record Salary Payment", True)
+            return True
+        else:
+            self.log_result("Record Salary Payment", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_get_salary_payments(self):
+        """Test getting salary payments list"""
+        success, response, status = self.make_request('GET', 'salary-payments', expected_status=200)
+        if success and isinstance(response, list):
+            self.log_result("Get Salary Payments", True)
+            return True
+        else:
+            self.log_result("Get Salary Payments", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_hr_summary(self):
+        """Test HR summary report"""
+        success, response, status = self.make_request('GET', 'reports/hr-summary', expected_status=200)
+        if success and 'total_staff' in response and 'total_monthly_salary' in response:
+            self.log_result("HR Summary Report", True)
+            return True
+        else:
+            self.log_result("HR Summary Report", False, f"Status: {status}, Response: {response}")
+            return False
+
+    # ==================== EXPENSE TESTS ====================
+    
+    def test_create_expense(self):
+        """Test expense creation"""
+        data = {
+            "category": "utilities",
+            "description": "Test electricity bill payment",
+            "amount": 5000.0,
+            "date": datetime.now().strftime('%Y-%m-%d'),
+            "vendor": "Test Electricity Board",
+            "notes": "Monthly electricity bill"
+        }
+        
+        success, response, status = self.make_request('POST', 'expenses', data, 200)
+        if success and 'id' in response:
+            self.test_expense_id = response['id']
+            self.log_result("Create Expense", True)
+            return True
+        else:
+            self.log_result("Create Expense", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_get_expenses(self):
+        """Test getting expenses list"""
+        success, response, status = self.make_request('GET', 'expenses', expected_status=200)
+        if success and isinstance(response, list):
+            self.log_result("Get Expenses List", True)
+            return True
+        else:
+            self.log_result("Get Expenses List", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_get_expenses_by_category(self):
+        """Test getting expenses by category"""
+        success, response, status = self.make_request('GET', 'expenses?category=utilities', expected_status=200)
+        if success and isinstance(response, list):
+            self.log_result("Get Expenses by Category", True)
+            return True
+        else:
+            self.log_result("Get Expenses by Category", False, f"Status: {status}, Response: {response}")
+            return False
+
     # ==================== MAIN TEST RUNNER ====================
     
     def run_all_tests(self):
