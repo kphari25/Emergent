@@ -540,31 +540,69 @@ async def update_appointment_status(appointment_id: str, status: str, current_us
 
 # ==================== BILLING ROUTES ====================
 
+def ensure_bill_profit_fields(bill: dict) -> dict:
+    """Ensure bill has profit fields for backward compatibility"""
+    if bill:
+        if 'total_cost' not in bill:
+            bill['total_cost'] = 0
+        if 'total_profit' not in bill:
+            bill['total_profit'] = 0
+    return bill
+
 @api_router.post("/bills", response_model=BillResponse)
 async def create_bill(bill: BillCreate, current_user: dict = Depends(get_current_user)):
     patient = await db.patients.find_one({'id': bill.patient_id}, {'_id': 0})
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
     
-    items_total = sum(item['quantity'] * item['price'] for item in bill.items)
-    total_amount = items_total + bill.treatment_charges + bill.room_charges
+    # Calculate totals and profit for each item
+    items_with_profit = []
+    total_sale = 0
+    total_cost = 0
+    
+    for item in bill.items:
+        sale_price = item.get('sale_price', item.get('price', 0))
+        purchase_price = item.get('purchase_price', 0)
+        quantity = item.get('quantity', 1)
+        
+        item_sale = quantity * sale_price
+        item_cost = quantity * purchase_price
+        item_profit = item_sale - item_cost
+        
+        items_with_profit.append({
+            'name': item.get('name', ''),
+            'quantity': quantity,
+            'sale_price': sale_price,
+            'purchase_price': purchase_price,
+            'item_total': item_sale,
+            'item_cost': item_cost,
+            'profit': item_profit
+        })
+        
+        total_sale += item_sale
+        total_cost += item_cost
+    
+    total_profit = total_sale - total_cost
+    total_amount = total_sale + bill.treatment_charges + bill.room_charges
     
     bill_id = str(uuid.uuid4())
     bill_doc = {
         'id': bill_id,
         'patient_id': bill.patient_id,
         'patient_name': patient['name'],
-        'items': bill.items,
+        'items': items_with_profit,
         'treatment_charges': bill.treatment_charges,
         'room_charges': bill.room_charges,
         'total_amount': total_amount,
+        'total_cost': total_cost,
+        'total_profit': total_profit,
         'paid_amount': 0,
         'status': 'pending',
         'notes': bill.notes or "",
         'created_at': datetime.now(timezone.utc).isoformat()
     }
     await db.bills.insert_one(bill_doc)
-    return bill_doc
+    return await db.bills.find_one({'id': bill_id}, {'_id': 0})
 
 @api_router.get("/bills", response_model=List[BillResponse])
 async def get_bills(patient_id: Optional[str] = None, status: Optional[str] = None, current_user: dict = Depends(get_current_user)):
@@ -574,14 +612,14 @@ async def get_bills(patient_id: Optional[str] = None, status: Optional[str] = No
     if status and status != 'all':
         query['status'] = status
     bills = await db.bills.find(query, {'_id': 0}).to_list(1000)
-    return bills
+    return [ensure_bill_profit_fields(b) for b in bills]
 
 @api_router.get("/bills/{bill_id}", response_model=BillResponse)
 async def get_bill(bill_id: str, current_user: dict = Depends(get_current_user)):
     bill = await db.bills.find_one({'id': bill_id}, {'_id': 0})
     if not bill:
         raise HTTPException(status_code=404, detail="Bill not found")
-    return bill
+    return ensure_bill_profit_fields(bill)
 
 @api_router.post("/bills/payment")
 async def record_payment(payment: PaymentRequest, current_user: dict = Depends(get_current_user)):
