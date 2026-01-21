@@ -377,9 +377,26 @@ async def patient_checkout(patient_id: str, current_user: dict = Depends(get_cur
 
 # ==================== INVENTORY ROUTES ====================
 
+def calculate_sale_price(purchase_price: float, markup_percentage: float) -> float:
+    return round(purchase_price * (1 + markup_percentage / 100), 2)
+
+def add_sale_price_to_item(item: dict) -> dict:
+    """Add calculated sale_price to inventory item"""
+    if item:
+        purchase_price = item.get('purchase_price', item.get('price', 0))
+        markup = item.get('markup_percentage', 20)
+        item['sale_price'] = calculate_sale_price(purchase_price, markup)
+        # Ensure purchase_price exists (for backward compatibility)
+        if 'purchase_price' not in item:
+            item['purchase_price'] = item.get('price', 0)
+        if 'markup_percentage' not in item:
+            item['markup_percentage'] = 20
+    return item
+
 @api_router.post("/inventory", response_model=InventoryItemResponse)
 async def create_inventory_item(item: InventoryItemCreate, current_user: dict = Depends(get_current_user)):
     item_id = str(uuid.uuid4())
+    sale_price = calculate_sale_price(item.purchase_price, item.markup_percentage)
     item_doc = {
         'id': item_id,
         'name': item.name,
@@ -387,7 +404,9 @@ async def create_inventory_item(item: InventoryItemCreate, current_user: dict = 
         'quantity': item.quantity,
         'unit': item.unit,
         'min_stock': item.min_stock,
-        'price': item.price,
+        'purchase_price': item.purchase_price,
+        'markup_percentage': item.markup_percentage,
+        'sale_price': sale_price,
         'supplier': item.supplier or "",
         'batch_number': item.batch_number or "",
         'expiry_date': item.expiry_date or "",
@@ -396,7 +415,7 @@ async def create_inventory_item(item: InventoryItemCreate, current_user: dict = 
         'created_at': datetime.now(timezone.utc).isoformat()
     }
     await db.inventory.insert_one(item_doc)
-    return item_doc
+    return await db.inventory.find_one({'id': item_id}, {'_id': 0})
 
 @api_router.get("/inventory", response_model=List[InventoryItemResponse])
 async def get_inventory(category: Optional[str] = None, current_user: dict = Depends(get_current_user)):
@@ -404,23 +423,26 @@ async def get_inventory(category: Optional[str] = None, current_user: dict = Dep
     if category and category != 'all':
         query['category'] = category
     items = await db.inventory.find(query, {'_id': 0}).to_list(1000)
-    return items
+    # Add sale_price to each item (for backward compatibility)
+    return [add_sale_price_to_item(item) for item in items]
 
 @api_router.get("/inventory/{item_id}", response_model=InventoryItemResponse)
 async def get_inventory_item(item_id: str, current_user: dict = Depends(get_current_user)):
     item = await db.inventory.find_one({'id': item_id}, {'_id': 0})
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
-    return item
+    return add_sale_price_to_item(item)
 
 @api_router.put("/inventory/{item_id}", response_model=InventoryItemResponse)
 async def update_inventory_item(item_id: str, item: InventoryItemCreate, current_user: dict = Depends(get_current_user)):
+    sale_price = calculate_sale_price(item.purchase_price, item.markup_percentage)
     update_data = item.model_dump()
+    update_data['sale_price'] = sale_price
     await db.inventory.update_one({'id': item_id}, {'$set': update_data})
     updated = await db.inventory.find_one({'id': item_id}, {'_id': 0})
     if not updated:
         raise HTTPException(status_code=404, detail="Item not found")
-    return updated
+    return add_sale_price_to_item(updated)
 
 @api_router.post("/inventory/{item_id}/update-stock")
 async def update_stock(item_id: str, request: InventoryUpdateRequest, current_user: dict = Depends(get_current_user)):
