@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# AyurCare Pro - Local Setup Script
+# Tatva Ayurved - Local Setup Script
 # Run this script after cloning the repository
 
 set -e
 
 echo "=========================================="
-echo "  AyurCare Pro - Local Setup"
+echo "  Tatva Ayurved - Local Setup"
 echo "=========================================="
 
 # Check prerequisites

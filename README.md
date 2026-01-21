@@ -1,4 +1,4 @@
-# AyurCare Pro - Ayurvedic Hospital Management System
+# Tatva Ayurved - Ayurvedic Hospital Management System
 
 ## Local Installation Guide
 
