@@ -1,0 +1,128 @@
+{
+  "timestamp": "2026-01-21T21:33:53.477883",
+  "total_tests": 24,
+  "passed_tests": 24,
+  "success_rate": 100.0,
+  "results": [
+    {
+      "test": "Login with Provided Credentials",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Current User",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Create Doctor",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Doctors List",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Create Room",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Rooms List",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Available Rooms",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Create Patient",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Patients List",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Patient by ID",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Patient OP Check-in",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Patient Check-out",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Create Inventory Item",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Inventory List",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Update Inventory Stock",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Create Appointment",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Appointments List",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Update Appointment Status",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Create Bill",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Bills List",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Record Payment",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Dashboard Statistics",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Inventory Analytics",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Revenue Report",
+      "success": true,
+      "details": ""
+    }
+  ]
+}
