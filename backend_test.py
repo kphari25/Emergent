@@ -22,6 +22,9 @@ class AyurCareAPITester:
         self.test_appointment_id = None
         self.test_bill_id = None
         self.test_room_id = None
+        self.test_staff_id = None
+        self.test_salary_payment_id = None
+        self.test_expense_id = None
 
     def log_result(self, test_name, success, details=""):
         """Log test result"""
