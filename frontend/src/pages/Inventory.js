@@ -215,19 +215,42 @@ export default function Inventory() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Price (₹)</Label>
+                  <Label>Purchase Price (₹)</Label>
                   <Input
                     type="number"
                     step="0.01"
-                    value={newItem.price}
-                    onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+                    value={newItem.purchase_price}
+                    onChange={(e) => setNewItem({ ...newItem, purchase_price: e.target.value })}
                     required
                     className="rounded-xl"
-                    data-testid="item-price-input"
+                    data-testid="item-purchase-price-input"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label>Markup %</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={newItem.markup_percentage}
+                    onChange={(e) => setNewItem({ ...newItem, markup_percentage: e.target.value })}
+                    required
+                    className="rounded-xl"
+                    data-testid="item-markup-input"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Sale Price (₹)</Label>
+                  <Input
+                    type="text"
+                    value={calculateSalePrice(newItem.purchase_price, newItem.markup_percentage)}
+                    disabled
+                    className="rounded-xl bg-[#DAD7CD]/30"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Supplier</Label>
                   <Input
@@ -236,8 +259,6 @@ export default function Inventory() {
                     className="rounded-xl"
                   />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Batch Number</Label>
                   <Input
@@ -246,15 +267,15 @@ export default function Inventory() {
                     className="rounded-xl"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Expiry Date</Label>
-                  <Input
-                    type="date"
-                    value={newItem.expiry_date}
-                    onChange={(e) => setNewItem({ ...newItem, expiry_date: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Expiry Date</Label>
+                <Input
+                  type="date"
+                  value={newItem.expiry_date}
+                  onChange={(e) => setNewItem({ ...newItem, expiry_date: e.target.value })}
+                  className="rounded-xl w-1/2"
+                />
               </div>
               <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="submit-item-btn">
                 Add Item
