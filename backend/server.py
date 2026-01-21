@@ -90,7 +90,8 @@ class InventoryItemCreate(BaseModel):
     quantity: int
     unit: str
     min_stock: int
-    price: float
+    purchase_price: float  # Cost price
+    markup_percentage: float = 20  # Default 20% markup
     supplier: Optional[str] = ""
     batch_number: Optional[str] = ""
     expiry_date: Optional[str] = ""
@@ -102,7 +103,9 @@ class InventoryItemResponse(BaseModel):
     quantity: int
     unit: str
     min_stock: int
-    price: float
+    purchase_price: float
+    markup_percentage: float
+    sale_price: float  # Calculated: purchase_price * (1 + markup/100)
     supplier: str
     batch_number: str
     expiry_date: str
