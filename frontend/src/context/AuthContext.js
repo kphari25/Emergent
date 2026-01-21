@@ -7,7 +7,7 @@ const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('ayurcare_token'));
+  const [token, setToken] = useState(localStorage.getItem('tatva_ayurved_token'));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
           });
           setUser(response.data);
         } catch (error) {
-          localStorage.removeItem('ayurcare_token');
+          localStorage.removeItem('tatva_ayurved_token');
           setToken(null);
         }
       }
@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const response = await axios.post(`${API_URL}/auth/login`, { email, password });
     const { access_token, user: userData } = response.data;
-    localStorage.setItem('ayurcare_token', access_token);
+    localStorage.setItem('tatva_ayurved_token', access_token);
     setToken(access_token);
     setUser(userData);
     return userData;
@@ -40,14 +40,14 @@ export const AuthProvider = ({ children }) => {
   const register = async (email, password, name, role) => {
     const response = await axios.post(`${API_URL}/auth/register`, { email, password, name, role });
     const { access_token, user: userData } = response.data;
-    localStorage.setItem('ayurcare_token', access_token);
+    localStorage.setItem('tatva_ayurved_token', access_token);
     setToken(access_token);
     setUser(userData);
     return userData;
   };
 
   const logout = () => {
-    localStorage.removeItem('ayurcare_token');
+    localStorage.removeItem('tatva_ayurved_token');
     setToken(null);
     setUser(null);
   };
