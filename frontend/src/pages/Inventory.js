@@ -66,13 +66,14 @@ export default function Inventory() {
         ...newItem,
         quantity: parseInt(newItem.quantity),
         min_stock: parseInt(newItem.min_stock),
-        price: parseFloat(newItem.price)
+        purchase_price: parseFloat(newItem.purchase_price),
+        markup_percentage: parseFloat(newItem.markup_percentage)
       }, { headers: getAuthHeaders() });
       toast.success('Item added successfully');
       setAddDialogOpen(false);
       setNewItem({
         name: '', category: 'medicines', quantity: '', unit: 'pieces',
-        min_stock: '', price: '', supplier: '', batch_number: '', expiry_date: ''
+        min_stock: '', purchase_price: '', markup_percentage: '20', supplier: '', batch_number: '', expiry_date: ''
       });
       fetchInventory();
     } catch (error) {
