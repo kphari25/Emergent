@@ -693,6 +693,20 @@ class AyurCareAPITester:
         self.test_dashboard_stats()
         self.test_inventory_analytics()
         self.test_revenue_report()
+        self.test_financial_report()
+        
+        print("\n👥 HR Management Tests")
+        self.test_create_staff()
+        self.test_get_staff()
+        self.test_get_staff_by_department()
+        self.test_record_salary_payment()
+        self.test_get_salary_payments()
+        self.test_hr_summary()
+        
+        print("\n💸 Expense Management Tests")
+        self.test_create_expense()
+        self.test_get_expenses()
+        self.test_get_expenses_by_category()
         
         # Print Summary
         print("\n" + "=" * 60)
