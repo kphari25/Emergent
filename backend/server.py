@@ -830,7 +830,7 @@ async def record_salary_payment(payment: SalaryPaymentCreate, current_user: dict
         'created_at': datetime.now(timezone.utc).isoformat()
     }
     await db.salary_payments.insert_one(payment_doc)
-    return payment_doc
+    return await db.salary_payments.find_one({'id': payment_id}, {'_id': 0})
 
 @api_router.get("/staff/salary-payments/{staff_id}")
 async def get_staff_salary_payments(staff_id: str, current_user: dict = Depends(get_current_user)):
@@ -862,7 +862,7 @@ async def create_expense(expense: ExpenseCreate, current_user: dict = Depends(ge
         'created_at': datetime.now(timezone.utc).isoformat()
     }
     await db.expenses.insert_one(expense_doc)
-    return expense_doc
+    return await db.expenses.find_one({'id': expense_id}, {'_id': 0})
 
 @api_router.get("/expenses")
 async def get_expenses(category: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: dict = Depends(get_current_user)):
