@@ -712,6 +712,318 @@ async def get_doctors(current_user: dict = Depends(get_current_user)):
     doctors = await db.users.find({'role': 'doctor'}, {'_id': 0, 'password': 0}).to_list(100)
     return doctors
 
+# ==================== HR / STAFF MANAGEMENT ====================
+
+class StaffCreate(BaseModel):
+    name: str
+    email: str
+    phone: str
+    role: str  # doctor, nurse, receptionist, pharmacist, accountant, other
+    department: str
+    designation: str
+    salary: float
+    join_date: str
+    address: Optional[str] = ""
+
+class StaffResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    phone: str
+    role: str
+    department: str
+    designation: str
+    salary: float
+    join_date: str
+    address: str
+    status: str  # active, inactive
+    created_at: str
+
+class SalaryPaymentCreate(BaseModel):
+    staff_id: str
+    month: str  # YYYY-MM format
+    amount: float
+    bonus: float = 0
+    deductions: float = 0
+    payment_date: str
+    payment_method: str
+    notes: Optional[str] = ""
+
+class ExpenseCreate(BaseModel):
+    category: str  # utilities, maintenance, supplies, equipment, rent, other
+    description: str
+    amount: float
+    date: str
+    vendor: Optional[str] = ""
+    notes: Optional[str] = ""
+
+@api_router.post("/staff")
+async def create_staff(staff: StaffCreate, current_user: dict = Depends(get_current_user)):
+    staff_id = str(uuid.uuid4())
+    staff_doc = {
+        'id': staff_id,
+        'name': staff.name,
+        'email': staff.email,
+        'phone': staff.phone,
+        'role': staff.role,
+        'department': staff.department,
+        'designation': staff.designation,
+        'salary': staff.salary,
+        'join_date': staff.join_date,
+        'address': staff.address or "",
+        'status': 'active',
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.staff.insert_one(staff_doc)
+    return staff_doc
+
+@api_router.get("/staff")
+async def get_staff(department: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if department and department != 'all':
+        query['department'] = department
+    staff = await db.staff.find(query, {'_id': 0}).to_list(1000)
+    return staff
+
+@api_router.get("/staff/{staff_id}")
+async def get_staff_member(staff_id: str, current_user: dict = Depends(get_current_user)):
+    staff = await db.staff.find_one({'id': staff_id}, {'_id': 0})
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    return staff
+
+@api_router.put("/staff/{staff_id}")
+async def update_staff(staff_id: str, staff: StaffCreate, current_user: dict = Depends(get_current_user)):
+    update_data = staff.model_dump()
+    await db.staff.update_one({'id': staff_id}, {'$set': update_data})
+    updated = await db.staff.find_one({'id': staff_id}, {'_id': 0})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    return updated
+
+@api_router.delete("/staff/{staff_id}")
+async def delete_staff(staff_id: str, current_user: dict = Depends(get_current_user)):
+    await db.staff.update_one({'id': staff_id}, {'$set': {'status': 'inactive'}})
+    return {"message": "Staff deactivated"}
+
+@api_router.post("/staff/salary-payment")
+async def record_salary_payment(payment: SalaryPaymentCreate, current_user: dict = Depends(get_current_user)):
+    staff = await db.staff.find_one({'id': payment.staff_id}, {'_id': 0})
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    
+    payment_id = str(uuid.uuid4())
+    net_amount = payment.amount + payment.bonus - payment.deductions
+    payment_doc = {
+        'id': payment_id,
+        'staff_id': payment.staff_id,
+        'staff_name': staff['name'],
+        'month': payment.month,
+        'base_amount': payment.amount,
+        'bonus': payment.bonus,
+        'deductions': payment.deductions,
+        'net_amount': net_amount,
+        'payment_date': payment.payment_date,
+        'payment_method': payment.payment_method,
+        'notes': payment.notes or "",
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.salary_payments.insert_one(payment_doc)
+    return payment_doc
+
+@api_router.get("/staff/salary-payments/{staff_id}")
+async def get_staff_salary_payments(staff_id: str, current_user: dict = Depends(get_current_user)):
+    payments = await db.salary_payments.find({'staff_id': staff_id}, {'_id': 0}).to_list(100)
+    return payments
+
+@api_router.get("/salary-payments")
+async def get_all_salary_payments(month: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if month:
+        query['month'] = month
+    payments = await db.salary_payments.find(query, {'_id': 0}).to_list(1000)
+    return payments
+
+# ==================== EXPENSE MANAGEMENT ====================
+
+@api_router.post("/expenses")
+async def create_expense(expense: ExpenseCreate, current_user: dict = Depends(get_current_user)):
+    expense_id = str(uuid.uuid4())
+    expense_doc = {
+        'id': expense_id,
+        'category': expense.category,
+        'description': expense.description,
+        'amount': expense.amount,
+        'date': expense.date,
+        'vendor': expense.vendor or "",
+        'notes': expense.notes or "",
+        'created_by': current_user['id'],
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.expenses.insert_one(expense_doc)
+    return expense_doc
+
+@api_router.get("/expenses")
+async def get_expenses(category: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if category and category != 'all':
+        query['category'] = category
+    if start_date:
+        query['date'] = {'$gte': start_date}
+    if end_date:
+        if 'date' in query:
+            query['date']['$lte'] = end_date
+        else:
+            query['date'] = {'$lte': end_date}
+    expenses = await db.expenses.find(query, {'_id': 0}).to_list(1000)
+    return expenses
+
+@api_router.delete("/expenses/{expense_id}")
+async def delete_expense(expense_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.expenses.delete_one({'id': expense_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    return {"message": "Expense deleted"}
+
+# ==================== ENHANCED FINANCIAL REPORTS ====================
+
+@api_router.get("/reports/financial")
+async def get_financial_report(start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    # Date filter
+    date_filter = {}
+    if start_date:
+        date_filter['$gte'] = start_date
+    if end_date:
+        date_filter['$lte'] = end_date if '$gte' in date_filter else end_date
+    
+    # Get all IP and OP patients (historical)
+    all_checkins = await db.checkin_history.find({}, {'_id': 0}).to_list(10000)
+    total_ip_checkins = len([c for c in all_checkins if c.get('patient_type') == 'IP'])
+    total_op_checkins = len([c for c in all_checkins if c.get('patient_type') == 'OP'])
+    
+    # Current IP/OP
+    current_ip = await db.patients.count_documents({'patient_type': 'IP', 'status': 'active'})
+    current_op = await db.patients.count_documents({'patient_type': 'OP', 'status': 'active'})
+    
+    # Revenue from bills
+    bill_query = {'created_at': date_filter} if date_filter else {}
+    bills = await db.bills.find(bill_query, {'_id': 0}).to_list(10000)
+    total_revenue = sum(b['total_amount'] for b in bills)
+    collected_revenue = sum(b['paid_amount'] for b in bills)
+    
+    # Medicine sales (from bill items)
+    medicine_sales = 0
+    for bill in bills:
+        for item in bill.get('items', []):
+            medicine_sales += item.get('quantity', 0) * item.get('price', 0)
+    
+    # Treatment revenue
+    treatment_revenue = sum(b.get('treatment_charges', 0) for b in bills)
+    room_revenue = sum(b.get('room_charges', 0) for b in bills)
+    
+    # Expenses
+    expense_query = {'date': date_filter} if date_filter else {}
+    expenses = await db.expenses.find(expense_query, {'_id': 0}).to_list(10000)
+    total_expenses = sum(e['amount'] for e in expenses)
+    
+    # Expense by category
+    expense_by_category = {}
+    for exp in expenses:
+        cat = exp['category']
+        expense_by_category[cat] = expense_by_category.get(cat, 0) + exp['amount']
+    
+    # Salary expenses
+    salary_query = {}
+    if start_date:
+        salary_query['payment_date'] = {'$gte': start_date}
+    if end_date:
+        if 'payment_date' in salary_query:
+            salary_query['payment_date']['$lte'] = end_date
+        else:
+            salary_query['payment_date'] = {'$lte': end_date}
+    
+    salary_payments = await db.salary_payments.find(salary_query, {'_id': 0}).to_list(10000)
+    total_salary_expense = sum(p['net_amount'] for p in salary_payments)
+    
+    # Total expenses including salaries
+    total_all_expenses = total_expenses + total_salary_expense
+    
+    # Profit/Loss
+    profit_loss = collected_revenue - total_all_expenses
+    
+    return {
+        'patients': {
+            'total_ip_checkins': total_ip_checkins,
+            'total_op_checkins': total_op_checkins,
+            'current_ip': current_ip,
+            'current_op': current_op
+        },
+        'revenue': {
+            'total_billed': total_revenue,
+            'collected': collected_revenue,
+            'pending': total_revenue - collected_revenue,
+            'medicine_sales': medicine_sales,
+            'treatment_revenue': treatment_revenue,
+            'room_revenue': room_revenue
+        },
+        'expenses': {
+            'operational': total_expenses,
+            'salaries': total_salary_expense,
+            'total': total_all_expenses,
+            'by_category': expense_by_category
+        },
+        'profit_loss': {
+            'gross_profit': collected_revenue - total_expenses,
+            'net_profit': profit_loss,
+            'is_profit': profit_loss >= 0
+        },
+        'summary': {
+            'total_revenue': collected_revenue,
+            'total_expense': total_all_expenses,
+            'net_result': profit_loss
+        }
+    }
+
+@api_router.get("/reports/hr-summary")
+async def get_hr_summary(current_user: dict = Depends(get_current_user)):
+    staff = await db.staff.find({'status': 'active'}, {'_id': 0}).to_list(1000)
+    
+    # Total salary liability
+    total_monthly_salary = sum(s['salary'] for s in staff)
+    
+    # Staff by department
+    by_department = {}
+    for s in staff:
+        dept = s['department']
+        if dept not in by_department:
+            by_department[dept] = {'count': 0, 'salary': 0}
+        by_department[dept]['count'] += 1
+        by_department[dept]['salary'] += s['salary']
+    
+    # Staff by role
+    by_role = {}
+    for s in staff:
+        role = s['role']
+        by_role[role] = by_role.get(role, 0) + 1
+    
+    # Recent salary payments
+    recent_payments = await db.salary_payments.find({}, {'_id': 0}).sort('created_at', -1).to_list(10)
+    
+    # Current month payments
+    current_month = datetime.now(timezone.utc).strftime('%Y-%m')
+    paid_this_month = await db.salary_payments.find({'month': current_month}, {'_id': 0}).to_list(1000)
+    paid_staff_ids = [p['staff_id'] for p in paid_this_month]
+    
+    return {
+        'total_staff': len(staff),
+        'total_monthly_salary': total_monthly_salary,
+        'by_department': by_department,
+        'by_role': by_role,
+        'recent_payments': recent_payments,
+        'paid_this_month': len(paid_this_month),
+        'pending_this_month': len(staff) - len(paid_this_month)
+    }
+
 # Include router
 app.include_router(api_router)
 
