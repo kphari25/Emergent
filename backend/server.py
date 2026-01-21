@@ -1041,6 +1041,8 @@ async def get_financial_report(start_date: Optional[str] = None, end_date: Optio
             'collected': collected_revenue,
             'pending': total_revenue - collected_revenue,
             'medicine_sales': medicine_sales,
+            'medicine_cost': medicine_cost,
+            'medicine_profit': medicine_profit,
             'treatment_revenue': treatment_revenue,
             'room_revenue': room_revenue
         },
@@ -1051,6 +1053,7 @@ async def get_financial_report(start_date: Optional[str] = None, end_date: Optio
             'by_category': expense_by_category
         },
         'profit_loss': {
+            'medicine_profit': medicine_profit,
             'gross_profit': collected_revenue - total_expenses,
             'net_profit': profit_loss,
             'is_profit': profit_loss >= 0
