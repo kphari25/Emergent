@@ -8,7 +8,6 @@ import {
   Receipt, 
   BarChart3, 
   LogOut,
-  Leaf,
   Menu,
   X,
   UserCog
@@ -42,11 +41,13 @@ export const Layout = ({ children }) => {
       <aside className="sidebar hidden md:flex flex-col w-64 min-h-screen" data-testid="sidebar">
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <Leaf className="w-6 h-6 text-white" />
-            </div>
+            <img 
+              src="https://customer-assets.emergentagent.com/job_756d16a4-b299-4f97-8859-f036a0db1e8b/artifacts/3xynh5cc_tatva.jpg" 
+              alt="Tatva Ayurved"
+              className="w-10 h-10 rounded-xl object-cover"
+            />
             <div>
-              <h1 className="text-lg font-bold text-white tracking-tight">AyurCare</h1>
+              <h1 className="text-lg font-bold text-white tracking-tight">Tatva Ayurved</h1>
               <p className="text-xs text-white/60">Hospital Management</p>
             </div>
           </div>
@@ -88,8 +89,12 @@ export const Layout = ({ children }) => {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#344E41] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Leaf className="w-6 h-6 text-white" />
-          <span className="text-white font-bold">AyurCare</span>
+          <img 
+            src="https://customer-assets.emergentagent.com/job_756d16a4-b299-4f97-8859-f036a0db1e8b/artifacts/3xynh5cc_tatva.jpg" 
+            alt="Tatva Ayurved"
+            className="w-8 h-8 rounded-lg object-cover"
+          />
+          <span className="text-white font-bold">Tatva Ayurved</span>
         </div>
         <Button
           variant="ghost"
