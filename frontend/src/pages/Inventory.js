@@ -32,10 +32,17 @@ export default function Inventory() {
 
   const [newItem, setNewItem] = useState({
     name: '', category: 'medicines', quantity: '', unit: 'pieces',
-    min_stock: '', price: '', supplier: '', batch_number: '', expiry_date: ''
+    min_stock: '', purchase_price: '', markup_percentage: '20', supplier: '', batch_number: '', expiry_date: ''
   });
 
   const [stockUpdate, setStockUpdate] = useState({ quantity_change: '', reason: '' });
+
+  // Calculate sale price from purchase price and markup
+  const calculateSalePrice = (purchasePrice, markup) => {
+    const pp = parseFloat(purchasePrice) || 0;
+    const m = parseFloat(markup) || 0;
+    return (pp * (1 + m / 100)).toFixed(2);
+  };
 
   useEffect(() => {
     fetchInventory();
