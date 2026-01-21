@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-01-21T21:33:53.477883",
-  "total_tests": 24,
-  "passed_tests": 24,
+  "timestamp": "2026-01-21T22:16:55.229901",
+  "total_tests": 34,
+  "passed_tests": 34,
   "success_rate": 100.0,
   "results": [
     {
@@ -121,6 +121,56 @@
     },
     {
       "test": "Revenue Report",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Financial Report",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Create Staff",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Staff List",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Staff by Department",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Record Salary Payment",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Salary Payments",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "HR Summary Report",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Create Expense",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Expenses List",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Expenses by Category",
       "success": true,
       "details": ""
     }
