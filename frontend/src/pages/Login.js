@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Leaf, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -55,14 +55,16 @@ export default function Login() {
         <div className="max-w-md mx-auto w-full">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-12">
-            <div className="w-12 h-12 rounded-xl bg-[#3A5A40] flex items-center justify-center">
-              <Leaf className="w-7 h-7 text-white" />
-            </div>
+            <img 
+              src="https://customer-assets.emergentagent.com/job_756d16a4-b299-4f97-8859-f036a0db1e8b/artifacts/3xynh5cc_tatva.jpg" 
+              alt="Tatva Ayurved Logo"
+              className="w-14 h-14 rounded-xl object-cover"
+            />
             <div>
               <h1 className="text-2xl font-bold text-[#1A1C18] tracking-tight" style={{ fontFamily: 'Playfair Display' }}>
-                AyurCare Pro
+                Tatva Ayurved
               </h1>
-              <p className="text-sm text-[#6B7280]">Hospital Management System</p>
+              <p className="text-sm text-[#6B7280]">Ayurveda for Health & Happiness</p>
             </div>
           </div>
 
@@ -208,10 +210,10 @@ export default function Login() {
         <div className="login-image-overlay flex items-end p-12">
           <div className="text-white">
             <h3 className="text-3xl font-bold mb-3" style={{ fontFamily: 'Playfair Display' }}>
-              Ancient Wisdom, Modern Care
+              Ayurveda for Health & Happiness
             </h3>
             <p className="text-white/80 text-lg max-w-md">
-              Streamline your Ayurvedic hospital operations with our comprehensive management system
+              Streamline your Ayurvedic hospital operations with Tatva Ayurved management system
             </p>
           </div>
         </div>
