@@ -977,11 +977,23 @@ async def get_financial_report(start_date: Optional[str] = None, end_date: Optio
     total_revenue = sum(b['total_amount'] for b in bills)
     collected_revenue = sum(b['paid_amount'] for b in bills)
     
-    # Medicine sales (from bill items)
+    # Medicine sales and profit (from bill items)
     medicine_sales = 0
+    medicine_cost = 0
+    medicine_profit = 0
     for bill in bills:
         for item in bill.get('items', []):
-            medicine_sales += item.get('quantity', 0) * item.get('price', 0)
+            qty = item.get('quantity', 0)
+            sale_price = item.get('sale_price', item.get('price', 0))
+            purchase_price = item.get('purchase_price', 0)
+            medicine_sales += qty * sale_price
+            medicine_cost += qty * purchase_price
+        # Also sum from bill-level profit tracking
+        medicine_profit += bill.get('total_profit', 0)
+    
+    # If no bill-level profit, calculate from sales - cost
+    if medicine_profit == 0:
+        medicine_profit = medicine_sales - medicine_cost
     
     # Treatment revenue
     treatment_revenue = sum(b.get('treatment_charges', 0) for b in bills)
