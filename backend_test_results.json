@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-01-22T00:17:24.048619",
-  "total_tests": 34,
-  "passed_tests": 32,
-  "success_rate": 94.11764705882352,
+  "timestamp": "2026-01-22T00:18:06.781651",
+  "total_tests": 40,
+  "passed_tests": 38,
+  "success_rate": 95.0,
   "results": [
     {
       "test": "Login with Provided Credentials",
@@ -66,8 +66,8 @@
     },
     {
       "test": "Create Inventory Item",
-      "success": false,
-      "details": "Status: 422, Response: {'detail': [{'type': 'missing', 'loc': ['body', 'purchase_price'], 'msg': 'Field required', 'input': {'name': 'Test Ashwagandha Powder', 'category': 'herbs', 'quantity': 100, 'unit': 'grams', 'min_stock': 20, 'price': 250.5, 'supplier': 'Test Ayurvedic Suppliers', 'batch_number': 'BATCH-20260122', 'expiry_date': '2027-01-22'}, 'url': 'https://errors.pydantic.dev/2.12/v/missing'}]}"
+      "success": true,
+      "details": ""
     },
     {
       "test": "Get Inventory List",
@@ -76,8 +76,8 @@
     },
     {
       "test": "Update Inventory Stock",
-      "success": false,
-      "details": "No test inventory ID available"
+      "success": true,
+      "details": ""
     },
     {
       "test": "Create Appointment",
@@ -93,6 +93,36 @@
       "test": "Update Appointment Status",
       "success": true,
       "details": ""
+    },
+    {
+      "test": "Create Prescription",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Prescriptions List",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Patient Prescriptions",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Get Prescription by ID",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Patient Report",
+      "success": true,
+      "details": ""
+    },
+    {
+      "test": "Inventory Stock Deduction",
+      "success": false,
+      "details": "Expected quantity: 95, Actual: 85"
     },
     {
       "test": "Create Bill",
@@ -116,8 +146,8 @@
     },
     {
       "test": "Inventory Analytics",
-      "success": true,
-      "details": ""
+      "success": false,
+      "details": "Status: 0, Response: {'error': 'Expecting value: line 1 column 1 (char 0)'}"
     },
     {
       "test": "Revenue Report",
