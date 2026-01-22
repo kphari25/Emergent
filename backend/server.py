@@ -564,6 +564,169 @@ async def update_appointment_status(appointment_id: str, status: str, current_us
         raise HTTPException(status_code=404, detail="Appointment not found")
     return updated
 
+# ==================== PRESCRIPTION ROUTES ====================
+
+@api_router.post("/prescriptions")
+async def create_prescription(prescription: PrescriptionCreate, current_user: dict = Depends(get_current_user)):
+    patient = await db.patients.find_one({'id': prescription.patient_id}, {'_id': 0})
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    doctor_name = None
+    if prescription.doctor_id:
+        doctor = await db.users.find_one({'id': prescription.doctor_id}, {'_id': 0})
+        if doctor:
+            doctor_name = doctor.get('name')
+    
+    # Process items and deduct from inventory
+    processed_items = []
+    for item in prescription.items:
+        inv_item = await db.inventory.find_one({'id': item.inventory_id})
+        if not inv_item:
+            raise HTTPException(status_code=404, detail=f"Inventory item {item.name} not found")
+        
+        if inv_item['quantity'] < item.quantity:
+            raise HTTPException(status_code=400, detail=f"Insufficient stock for {item.name}. Available: {inv_item['quantity']}")
+        
+        # Deduct from inventory
+        new_quantity = inv_item['quantity'] - item.quantity
+        movement_count = inv_item.get('movement_count', 0) + item.quantity
+        movement_status = 'fast' if movement_count > 50 else ('slow' if movement_count > 10 else 'dead')
+        
+        await db.inventory.update_one(
+            {'id': item.inventory_id},
+            {'$set': {
+                'quantity': new_quantity,
+                'movement_count': movement_count,
+                'movement_status': movement_status
+            }}
+        )
+        
+        # Record inventory movement
+        movement_record = {
+            'id': str(uuid.uuid4()),
+            'item_id': item.inventory_id,
+            'quantity_change': -item.quantity,
+            'reason': f"Prescribed to patient: {patient['name']}",
+            'user_id': current_user['id'],
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+        await db.inventory_movements.insert_one(movement_record)
+        
+        # Get pricing info
+        purchase_price = inv_item.get('purchase_price', inv_item.get('price', 0))
+        sale_price = inv_item.get('sale_price', purchase_price * 1.2)
+        
+        processed_items.append({
+            'inventory_id': item.inventory_id,
+            'name': item.name,
+            'quantity': item.quantity,
+            'dosage': item.dosage,
+            'duration': item.duration,
+            'purchase_price': purchase_price,
+            'sale_price': sale_price,
+            'total_cost': purchase_price * item.quantity,
+            'total_sale': sale_price * item.quantity
+        })
+    
+    prescription_id = str(uuid.uuid4())
+    prescription_doc = {
+        'id': prescription_id,
+        'patient_id': prescription.patient_id,
+        'patient_name': patient['name'],
+        'doctor_id': prescription.doctor_id,
+        'doctor_name': doctor_name,
+        'diagnosis': prescription.diagnosis,
+        'items': processed_items,
+        'notes': prescription.notes or "",
+        'status': 'active',
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.prescriptions.insert_one(prescription_doc)
+    return await db.prescriptions.find_one({'id': prescription_id}, {'_id': 0})
+
+@api_router.get("/prescriptions")
+async def get_prescriptions(patient_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if patient_id:
+        query['patient_id'] = patient_id
+    prescriptions = await db.prescriptions.find(query, {'_id': 0}).sort('created_at', -1).to_list(1000)
+    return prescriptions
+
+@api_router.get("/prescriptions/{prescription_id}")
+async def get_prescription(prescription_id: str, current_user: dict = Depends(get_current_user)):
+    prescription = await db.prescriptions.find_one({'id': prescription_id}, {'_id': 0})
+    if not prescription:
+        raise HTTPException(status_code=404, detail="Prescription not found")
+    return prescription
+
+@api_router.get("/patients/{patient_id}/prescriptions")
+async def get_patient_prescriptions(patient_id: str, current_user: dict = Depends(get_current_user)):
+    patient = await db.patients.find_one({'id': patient_id}, {'_id': 0})
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    prescriptions = await db.prescriptions.find({'patient_id': patient_id}, {'_id': 0}).sort('created_at', -1).to_list(100)
+    return prescriptions
+
+@api_router.get("/patients/{patient_id}/report")
+async def get_patient_report(patient_id: str, current_user: dict = Depends(get_current_user)):
+    """Get detailed patient report with all prescriptions and treatment history"""
+    patient = await db.patients.find_one({'id': patient_id}, {'_id': 0})
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Get all prescriptions
+    prescriptions = await db.prescriptions.find({'patient_id': patient_id}, {'_id': 0}).sort('created_at', -1).to_list(100)
+    
+    # Get all appointments
+    appointments = await db.appointments.find({'patient_id': patient_id}, {'_id': 0}).sort('date', -1).to_list(100)
+    
+    # Get all bills
+    bills = await db.bills.find({'patient_id': patient_id}, {'_id': 0}).sort('created_at', -1).to_list(100)
+    
+    # Get checkin history
+    checkins = await db.checkin_history.find({'patient_id': patient_id}, {'_id': 0}).sort('checkin_time', -1).to_list(100)
+    
+    # Calculate totals
+    total_medicines_prescribed = sum(
+        sum(item['quantity'] for item in p.get('items', []))
+        for p in prescriptions
+    )
+    total_medicine_value = sum(
+        sum(item.get('total_sale', 0) for item in p.get('items', []))
+        for p in prescriptions
+    )
+    total_billed = sum(b['total_amount'] for b in bills)
+    total_paid = sum(b['paid_amount'] for b in bills)
+    
+    return {
+        'patient': patient,
+        'prescriptions': prescriptions,
+        'appointments': appointments,
+        'bills': bills,
+        'checkin_history': checkins,
+        'summary': {
+            'total_prescriptions': len(prescriptions),
+            'total_medicines_prescribed': total_medicines_prescribed,
+            'total_medicine_value': total_medicine_value,
+            'total_appointments': len(appointments),
+            'total_visits': len(checkins),
+            'total_billed': total_billed,
+            'total_paid': total_paid,
+            'balance_due': total_billed - total_paid
+        }
+    }
+
+@api_router.put("/prescriptions/{prescription_id}/status")
+async def update_prescription_status(prescription_id: str, status: str, current_user: dict = Depends(get_current_user)):
+    if status not in ['active', 'completed', 'cancelled']:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    await db.prescriptions.update_one({'id': prescription_id}, {'$set': {'status': status}})
+    updated = await db.prescriptions.find_one({'id': prescription_id}, {'_id': 0})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Prescription not found")
+    return updated
+
 # ==================== BILLING ROUTES ====================
 
 def ensure_bill_profit_fields(bill: dict) -> dict:
