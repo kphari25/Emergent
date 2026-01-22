@@ -801,6 +801,14 @@ class AyurCareAPITester:
         self.test_get_appointments()
         self.test_update_appointment_status()
         
+        print("\n💊 Prescription Management Tests")
+        self.test_create_prescription()
+        self.test_get_prescriptions()
+        self.test_get_patient_prescriptions()
+        self.test_get_prescription_by_id()
+        self.test_patient_report()
+        self.test_inventory_stock_deduction()
+        
         print("\n💰 Billing Tests")
         self.test_create_bill()
         self.test_get_bills()
