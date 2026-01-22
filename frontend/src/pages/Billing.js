@@ -195,11 +195,14 @@ export default function Billing() {
                       <SelectValue placeholder="Select from inventory" />
                     </SelectTrigger>
                     <SelectContent>
-                      {inventory.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.name} - ₹{item.price}
-                        </SelectItem>
-                      ))}
+                      {inventory.map((item) => {
+                        const salePrice = item.sale_price || item.price || 0;
+                        return (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.name} - ₹{salePrice.toFixed(2)}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -220,13 +223,14 @@ export default function Billing() {
                   <div className="flex gap-2">
                     <Input
                       type="number"
-                      placeholder="Price"
-                      value={newItem.price}
-                      onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+                      placeholder="Sale Price"
+                      value={newItem.sale_price}
+                      onChange={(e) => setNewItem({ ...newItem, sale_price: e.target.value })}
                       className="rounded-xl"
                     />
                     <Button type="button" variant="outline" onClick={addItemToBill} className="rounded-xl">
                       <Plus className="w-4 h-4" />
+                    </Button>
                     </Button>
                   </div>
                 </div>
