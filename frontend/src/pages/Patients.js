@@ -313,6 +313,16 @@ export default function Patients() {
                       </td>
                       <td>
                         <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-full"
+                            onClick={() => navigate(`/patients/${patient.id}`)}
+                            data-testid={`view-btn-${patient.id}`}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View
+                          </Button>
                           {patient.patient_type === 'None' || patient.status === 'discharged' ? (
                             <Button
                               size="sm"
