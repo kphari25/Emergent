@@ -281,7 +281,8 @@ class AyurCareAPITester:
             "quantity": 100,
             "unit": "grams",
             "min_stock": 20,
-            "price": 250.50,
+            "purchase_price": 250.50,
+            "markup_percentage": 20,
             "supplier": "Test Ayurvedic Suppliers",
             "batch_number": f"BATCH-{datetime.now().strftime('%Y%m%d')}",
             "expiry_date": (datetime.now() + timedelta(days=365)).strftime('%Y-%m-%d')
