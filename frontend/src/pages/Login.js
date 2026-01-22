@@ -21,6 +21,9 @@ export default function Login() {
   const [role, setRole] = useState('staff');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSubmitted, setForgotSubmitted] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
 
@@ -50,6 +53,26 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await axios.post(`${API_URL}/auth/forgot-password`, { email: forgotEmail });
+      setForgotSubmitted(true);
+    } catch (error) {
+      // Show success anyway for security (don't reveal if email exists)
+      setForgotSubmitted(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const closeForgotDialog = () => {
+    setForgotPasswordOpen(false);
+    setForgotEmail('');
+    setForgotSubmitted(false);
   };
 
   return (
