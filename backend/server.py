@@ -206,6 +206,10 @@ class RoomResponse(BaseModel):
 
 # ==================== AUTH HELPERS ====================
 
+# Define roles and their permissions
+ROLES = ['admin', 'doctor', 'front_desk', 'hr', 'therapist']
+RESTRICTED_ROLES = ['doctor', 'front_desk', 'therapist']  # Cannot access HR and Reports
+
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
@@ -231,6 +235,21 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+def require_admin(current_user: dict = Depends(get_current_user)):
+    if current_user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+def require_hr_access(current_user: dict = Depends(get_current_user)):
+    if current_user.get('role') in RESTRICTED_ROLES:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return current_user
+
+def require_reports_access(current_user: dict = Depends(get_current_user)):
+    if current_user.get('role') in RESTRICTED_ROLES:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return current_user
 
 # ==================== AUTH ROUTES ====================
 
