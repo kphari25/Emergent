@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Patients from "@/pages/Patients";
+import PatientDetails from "@/pages/PatientDetails";
 import Inventory from "@/pages/Inventory";
 import Appointments from "@/pages/Appointments";
 import Billing from "@/pages/Billing";
@@ -44,6 +45,7 @@ function App() {
                   <Routes>
                     <Route index element={<Dashboard />} />
                     <Route path="patients" element={<Patients />} />
+                    <Route path="patients/:patientId" element={<PatientDetails />} />
                     <Route path="inventory" element={<Inventory />} />
                     <Route path="appointments" element={<Appointments />} />
                     <Route path="billing" element={<Billing />} />
