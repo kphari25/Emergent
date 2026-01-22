@@ -180,6 +180,9 @@ export default function Reports() {
                   <div>
                     <p className="metric-label">Medicine Sales</p>
                     <p className="metric-value">₹{(financialReport?.revenue?.medicine_sales || 0).toLocaleString()}</p>
+                    <p className="text-sm text-[#588157] mt-1">
+                      Profit: ₹{(financialReport?.revenue?.medicine_profit || 0).toLocaleString()}
+                    </p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-[#588157]/10 flex items-center justify-center">
                     <Pill className="w-6 h-6 text-[#588157]" />
