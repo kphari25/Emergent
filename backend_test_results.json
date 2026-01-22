@@ -1,8 +1,8 @@
 {
-  "timestamp": "2026-01-22T00:18:06.781651",
+  "timestamp": "2026-01-22T00:18:58.952433",
   "total_tests": 40,
-  "passed_tests": 38,
-  "success_rate": 95.0,
+  "passed_tests": 40,
+  "success_rate": 100.0,
   "results": [
     {
       "test": "Login with Provided Credentials",
@@ -121,8 +121,8 @@
     },
     {
       "test": "Inventory Stock Deduction",
-      "success": false,
-      "details": "Expected quantity: 95, Actual: 85"
+      "success": true,
+      "details": ""
     },
     {
       "test": "Create Bill",
@@ -146,8 +146,8 @@
     },
     {
       "test": "Inventory Analytics",
-      "success": false,
-      "details": "Status: 0, Response: {'error': 'Expecting value: line 1 column 1 (char 0)'}"
+      "success": true,
+      "details": ""
     },
     {
       "test": "Revenue Report",
