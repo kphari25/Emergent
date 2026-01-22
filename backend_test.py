@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import uuid
 
 class AyurCareAPITester:
-    def __init__(self, base_url="https://herb-tracker-4.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://tatva-ayurveda.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.user_id = None
