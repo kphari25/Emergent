@@ -11,7 +11,11 @@ import Appointments from "@/pages/Appointments";
 import Billing from "@/pages/Billing";
 import Reports from "@/pages/Reports";
 import HR from "@/pages/HR";
+import UserManagement from "@/pages/UserManagement";
 import Layout from "@/components/Layout";
+
+// Roles that have restricted access (cannot see HR and Reports)
+const RESTRICTED_ROLES = ['doctor', 'front_desk', 'therapist'];
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -26,6 +30,52 @@ const ProtectedRoute = ({ children }) => {
   
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
+
+// Route protection for admin-only pages
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#FDFCF8]">
+        <div className="spinner"></div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (user.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+  
+  return children;
+};
+
+// Route protection for HR/Reports pages (not accessible by restricted roles)
+const RestrictedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#FDFCF8]">
+        <div className="spinner"></div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (RESTRICTED_ROLES.includes(user.role)) {
+    return <Navigate to="/" replace />;
   }
   
   return children;
