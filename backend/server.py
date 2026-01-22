@@ -297,6 +297,119 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         'role': current_user['role']
     }
 
+# ==================== USER MANAGEMENT (ADMIN ONLY) ====================
+
+class UserCreateAdmin(BaseModel):
+    email: str
+    password: str
+    name: str
+    role: str  # admin, doctor, front_desk, hr, therapist
+
+class UserUpdateAdmin(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class PasswordReset(BaseModel):
+    new_password: str
+
+@api_router.get("/users")
+async def get_all_users(current_user: dict = Depends(require_admin)):
+    users = await db.users.find({}, {'_id': 0, 'password': 0}).to_list(1000)
+    return users
+
+@api_router.post("/users")
+async def create_user_admin(user: UserCreateAdmin, current_user: dict = Depends(require_admin)):
+    if user.role not in ROLES:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {', '.join(ROLES)}")
+    
+    existing = await db.users.find_one({'email': user.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    user_id = str(uuid.uuid4())
+    user_doc = {
+        'id': user_id,
+        'email': user.email,
+        'password': hash_password(user.password),
+        'name': user.name,
+        'role': user.role,
+        'is_active': True,
+        'created_by': current_user['id'],
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.users.insert_one(user_doc)
+    return await db.users.find_one({'id': user_id}, {'_id': 0, 'password': 0})
+
+@api_router.put("/users/{user_id}")
+async def update_user_admin(user_id: str, user_update: UserUpdateAdmin, current_user: dict = Depends(require_admin)):
+    user = await db.users.find_one({'id': user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    update_data = {}
+    if user_update.name is not None:
+        update_data['name'] = user_update.name
+    if user_update.role is not None:
+        if user_update.role not in ROLES:
+            raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {', '.join(ROLES)}")
+        update_data['role'] = user_update.role
+    if user_update.is_active is not None:
+        update_data['is_active'] = user_update.is_active
+    
+    if update_data:
+        await db.users.update_one({'id': user_id}, {'$set': update_data})
+    
+    return await db.users.find_one({'id': user_id}, {'_id': 0, 'password': 0})
+
+@api_router.delete("/users/{user_id}")
+async def delete_user_admin(user_id: str, current_user: dict = Depends(require_admin)):
+    if user_id == current_user['id']:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    user = await db.users.find_one({'id': user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    await db.users.delete_one({'id': user_id})
+    return {"message": "User deleted successfully"}
+
+@api_router.post("/users/{user_id}/reset-password")
+async def reset_user_password(user_id: str, password_data: PasswordReset, current_user: dict = Depends(require_admin)):
+    user = await db.users.find_one({'id': user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if len(password_data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    hashed = hash_password(password_data.new_password)
+    await db.users.update_one({'id': user_id}, {'$set': {'password': hashed}})
+    return {"message": "Password reset successfully"}
+
+@api_router.post("/auth/change-password")
+async def change_own_password(password_data: PasswordReset, current_user: dict = Depends(get_current_user)):
+    if len(password_data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    hashed = hash_password(password_data.new_password)
+    await db.users.update_one({'id': current_user['id']}, {'$set': {'password': hashed}})
+    return {"message": "Password changed successfully"}
+
+@api_router.get("/auth/roles")
+async def get_available_roles(current_user: dict = Depends(get_current_user)):
+    return {
+        'roles': ROLES,
+        'role_labels': {
+            'admin': 'Administrator',
+            'doctor': 'Doctor',
+            'front_desk': 'Front Desk Specialist',
+            'hr': 'HR Manager',
+            'therapist': 'Therapist'
+        },
+        'restricted_roles': RESTRICTED_ROLES
+    }
+
 # ==================== PATIENT ROUTES ====================
 
 @api_router.post("/patients", response_model=PatientResponse)
