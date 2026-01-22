@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,11 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Plus, UserPlus, LogIn, LogOut, Search, User, Bed, Ticket } from 'lucide-react';
+import { Plus, UserPlus, LogIn, LogOut, Search, User, Bed, Ticket, Eye } from 'lucide-react';
 
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function Patients() {
+  const navigate = useNavigate();
   const { getAuthHeaders } = useAuth();
   const [patients, setPatients] = useState([]);
   const [rooms, setRooms] = useState([]);
