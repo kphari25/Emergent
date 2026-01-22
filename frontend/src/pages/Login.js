@@ -255,6 +255,73 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={forgotPasswordOpen} onOpenChange={closeForgotDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: 'Playfair Display' }}>Reset Password</DialogTitle>
+            <DialogDescription>
+              {!forgotSubmitted 
+                ? "Enter your email address and we'll send you a reset link."
+                : ""
+              }
+            </DialogDescription>
+          </DialogHeader>
+          {!forgotSubmitted ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4 mt-2">
+              <div className="space-y-2">
+                <Label htmlFor="forgot-email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6B7280]" />
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                    className="h-12 pl-10 rounded-xl"
+                    data-testid="forgot-email-input"
+                  />
+                </div>
+              </div>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 bg-[#3A5A40] hover:bg-[#344E41] text-white rounded-full"
+                data-testid="forgot-submit-btn"
+              >
+                {isLoading ? <span className="spinner"></span> : 'Send Reset Link'}
+              </Button>
+            </form>
+          ) : (
+            <div className="text-center py-4 space-y-4">
+              <div className="w-16 h-16 mx-auto rounded-full bg-[#588157]/10 flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-[#588157]" />
+              </div>
+              <div>
+                <p className="font-medium text-[#1A1C18]">Check your email</p>
+                <p className="text-sm text-[#6B7280] mt-1">
+                  If an account exists with <strong>{forgotEmail}</strong>, we've sent password reset instructions.
+                </p>
+              </div>
+              <p className="text-xs text-[#D4A373] bg-[#D4A373]/10 p-3 rounded-xl">
+                Note: Reset link is logged to server console (MOCKED - no email service configured)
+              </p>
+              <Button
+                onClick={closeForgotDialog}
+                variant="outline"
+                className="rounded-full"
+                data-testid="back-to-login-btn"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Login
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
