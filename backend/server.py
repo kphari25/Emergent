@@ -1098,6 +1098,71 @@ async def get_doctors(current_user: dict = Depends(get_current_user)):
     doctors = await db.users.find({'role': 'doctor'}, {'_id': 0, 'password': 0}).to_list(100)
     return doctors
 
+# ==================== PASSWORD RESET (MOCKED) ====================
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+# In-memory store for password reset tokens (In production, use Redis or DB)
+password_reset_tokens = {}
+
+@api_router.post("/auth/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest):
+    """Request password reset - MOCKED (logs token to console)"""
+    user = await db.users.find_one({'email': request.email})
+    if not user:
+        # Return success even if user not found (security best practice)
+        return {"message": "If an account exists with this email, a reset link has been sent"}
+    
+    # Generate reset token
+    reset_token = str(uuid.uuid4())
+    expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    # Store token (in production, store in Redis/DB)
+    password_reset_tokens[reset_token] = {
+        'user_id': user['id'],
+        'email': request.email,
+        'expiry': expiry.isoformat()
+    }
+    
+    # MOCKED: Log token to console (in production, send via email)
+    logger.info(f"PASSWORD RESET TOKEN for {request.email}: {reset_token}")
+    logger.info(f"Reset link would be: /reset-password?token={reset_token}")
+    
+    return {"message": "If an account exists with this email, a reset link has been sent"}
+
+@api_router.post("/auth/reset-password")
+async def reset_password_with_token(request: ResetPasswordRequest):
+    """Reset password using token"""
+    token_data = password_reset_tokens.get(request.token)
+    if not token_data:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    
+    # Check expiry
+    expiry = datetime.fromisoformat(token_data['expiry'])
+    if datetime.now(timezone.utc) > expiry:
+        del password_reset_tokens[request.token]
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+    
+    if len(request.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    # Update password
+    hashed = hash_password(request.new_password)
+    await db.users.update_one(
+        {'id': token_data['user_id']},
+        {'$set': {'password': hashed}}
+    )
+    
+    # Remove used token
+    del password_reset_tokens[request.token]
+    
+    return {"message": "Password reset successfully"}
+
 # ==================== HR / STAFF MANAGEMENT ====================
 
 class StaffCreate(BaseModel):
@@ -1144,7 +1209,7 @@ class ExpenseCreate(BaseModel):
     notes: Optional[str] = ""
 
 @api_router.post("/staff")
-async def create_staff(staff: StaffCreate, current_user: dict = Depends(get_current_user)):
+async def create_staff(staff: StaffCreate, current_user: dict = Depends(require_hr_access)):
     staff_id = str(uuid.uuid4())
     staff_doc = {
         'id': staff_id,
@@ -1165,7 +1230,7 @@ async def create_staff(staff: StaffCreate, current_user: dict = Depends(get_curr
     return await db.staff.find_one({'id': staff_id}, {'_id': 0})
 
 @api_router.get("/staff")
-async def get_staff(department: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+async def get_staff(department: Optional[str] = None, current_user: dict = Depends(require_hr_access)):
     query = {}
     if department and department != 'all':
         query['department'] = department
@@ -1173,14 +1238,14 @@ async def get_staff(department: Optional[str] = None, current_user: dict = Depen
     return staff
 
 @api_router.get("/staff/{staff_id}")
-async def get_staff_member(staff_id: str, current_user: dict = Depends(get_current_user)):
+async def get_staff_member(staff_id: str, current_user: dict = Depends(require_hr_access)):
     staff = await db.staff.find_one({'id': staff_id}, {'_id': 0})
     if not staff:
         raise HTTPException(status_code=404, detail="Staff not found")
     return staff
 
 @api_router.put("/staff/{staff_id}")
-async def update_staff(staff_id: str, staff: StaffCreate, current_user: dict = Depends(get_current_user)):
+async def update_staff(staff_id: str, staff: StaffCreate, current_user: dict = Depends(require_hr_access)):
     update_data = staff.model_dump()
     await db.staff.update_one({'id': staff_id}, {'$set': update_data})
     updated = await db.staff.find_one({'id': staff_id}, {'_id': 0})
@@ -1189,12 +1254,12 @@ async def update_staff(staff_id: str, staff: StaffCreate, current_user: dict = D
     return updated
 
 @api_router.delete("/staff/{staff_id}")
-async def delete_staff(staff_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_staff(staff_id: str, current_user: dict = Depends(require_hr_access)):
     await db.staff.update_one({'id': staff_id}, {'$set': {'status': 'inactive'}})
     return {"message": "Staff deactivated"}
 
 @api_router.post("/staff/salary-payment")
-async def record_salary_payment(payment: SalaryPaymentCreate, current_user: dict = Depends(get_current_user)):
+async def record_salary_payment(payment: SalaryPaymentCreate, current_user: dict = Depends(require_hr_access)):
     staff = await db.staff.find_one({'id': payment.staff_id}, {'_id': 0})
     if not staff:
         raise HTTPException(status_code=404, detail="Staff not found")
@@ -1219,12 +1284,12 @@ async def record_salary_payment(payment: SalaryPaymentCreate, current_user: dict
     return await db.salary_payments.find_one({'id': payment_id}, {'_id': 0})
 
 @api_router.get("/staff/salary-payments/{staff_id}")
-async def get_staff_salary_payments(staff_id: str, current_user: dict = Depends(get_current_user)):
+async def get_staff_salary_payments(staff_id: str, current_user: dict = Depends(require_hr_access)):
     payments = await db.salary_payments.find({'staff_id': staff_id}, {'_id': 0}).to_list(100)
     return payments
 
 @api_router.get("/salary-payments")
-async def get_all_salary_payments(month: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+async def get_all_salary_payments(month: Optional[str] = None, current_user: dict = Depends(require_hr_access)):
     query = {}
     if month:
         query['month'] = month
@@ -1275,7 +1340,7 @@ async def delete_expense(expense_id: str, current_user: dict = Depends(get_curre
 # ==================== ENHANCED FINANCIAL REPORTS ====================
 
 @api_router.get("/reports/financial")
-async def get_financial_report(start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+async def get_financial_report(start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: dict = Depends(require_reports_access)):
     # Date filter
     date_filter = {}
     if start_date:
@@ -1387,7 +1452,7 @@ async def get_financial_report(start_date: Optional[str] = None, end_date: Optio
     }
 
 @api_router.get("/reports/hr-summary")
-async def get_hr_summary(current_user: dict = Depends(get_current_user)):
+async def get_hr_summary(current_user: dict = Depends(require_hr_access)):
     staff = await db.staff.find({'status': 'active'}, {'_id': 0}).to_list(1000)
     
     # Total salary liability
