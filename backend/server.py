@@ -913,7 +913,7 @@ async def get_inventory_analytics(current_user: dict = Depends(get_current_user)
         if cat not in category_stats:
             category_stats[cat] = {'total_items': 0, 'total_value': 0, 'fast': 0, 'slow': 0, 'dead': 0}
         category_stats[cat]['total_items'] += 1
-        category_stats[cat]['total_value'] += item['quantity'] * item['price']
+        category_stats[cat]['total_value'] += item['quantity'] * item.get('purchase_price', item.get('price', 0))
         category_stats[cat][item['movement_status']] += 1
     
     # Top fast moving
