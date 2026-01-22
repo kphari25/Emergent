@@ -352,7 +352,7 @@ export default function Billing() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
                       <div>
                         <p className="text-xs text-[#6B7280] uppercase tracking-wide">Total</p>
                         <p className="font-semibold text-[#1A1C18]">₹{bill.total_amount.toFixed(2)}</p>
@@ -365,6 +365,12 @@ export default function Billing() {
                         <p className="text-xs text-[#6B7280] uppercase tracking-wide">Balance</p>
                         <p className="font-semibold text-[#BC4749]">
                           ₹{(bill.total_amount - bill.paid_amount).toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[#6B7280] uppercase tracking-wide">Profit</p>
+                        <p className="font-semibold text-[#588157]">
+                          +₹{(bill.total_profit || 0).toFixed(2)}
                         </p>
                       </div>
                       <div>
