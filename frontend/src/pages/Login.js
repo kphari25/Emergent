@@ -156,6 +156,16 @@ export default function Login() {
                 >
                   {isLoading ? <span className="spinner"></span> : 'Sign In'}
                 </Button>
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => setForgotPasswordOpen(true)}
+                    className="text-sm text-[#3A5A40] hover:text-[#344E41] underline"
+                    data-testid="forgot-password-link"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
               </form>
             </TabsContent>
             
