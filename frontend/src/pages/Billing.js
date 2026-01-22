@@ -239,26 +239,37 @@ export default function Billing() {
               {/* Items List */}
               {newBill.items.length > 0 && (
                 <div className="border border-[#E2E8F0] rounded-xl p-4 space-y-2">
-                  {newBill.items.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between text-sm">
-                      <span>{item.name} x {item.quantity}</span>
-                      <div className="flex items-center gap-2">
-                        <span>₹{(item.quantity * item.price).toFixed(2)}</span>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6 text-[#BC4749]"
-                          onClick={() => removeItemFromBill(index)}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
+                  {newBill.items.map((item, index) => {
+                    const itemTotal = item.quantity * item.sale_price;
+                    const itemProfit = (item.sale_price - (item.purchase_price || 0)) * item.quantity;
+                    return (
+                      <div key={index} className="flex items-center justify-between text-sm">
+                        <span>{item.name} x {item.quantity}</span>
+                        <div className="flex items-center gap-3">
+                          <span>₹{itemTotal.toFixed(2)}</span>
+                          <span className="text-[#588157] text-xs">(+₹{itemProfit.toFixed(2)} profit)</span>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-[#BC4749]"
+                            onClick={() => removeItemFromBill(index)}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
+                    );
+                  })}
+                  <div className="pt-2 border-t border-[#E2E8F0] space-y-1">
+                    <div className="font-medium flex justify-between">
+                      <span>Items Total:</span>
+                      <span>₹{newBill.items.reduce((sum, i) => sum + (i.quantity * i.sale_price), 0).toFixed(2)}</span>
                     </div>
-                  ))}
-                  <div className="pt-2 border-t border-[#E2E8F0] font-medium flex justify-between">
-                    <span>Items Total:</span>
-                    <span>₹{newBill.items.reduce((sum, i) => sum + (i.quantity * i.price), 0).toFixed(2)}</span>
+                    <div className="flex justify-between text-sm text-[#588157]">
+                      <span>Items Profit:</span>
+                      <span>+₹{calculateBillProfit().toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
               )}
