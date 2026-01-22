@@ -319,9 +319,10 @@ export default function Inventory() {
                     <th>Item</th>
                     <th>Category</th>
                     <th>Stock</th>
-                    <th>Price</th>
+                    <th>Purchase Price</th>
+                    <th>Markup</th>
+                    <th>Sale Price</th>
                     <th>Movement</th>
-                    <th>Status</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -330,6 +331,9 @@ export default function Inventory() {
                     const Icon = categoryIcons[item.category] || Package;
                     const movementBadge = getMovementBadge(item.movement_status);
                     const isLowStock = item.quantity <= item.min_stock;
+                    const purchasePrice = item.purchase_price || item.price || 0;
+                    const markup = item.markup_percentage || 20;
+                    const salePrice = item.sale_price || (purchasePrice * (1 + markup / 100));
                     
                     return (
                       <tr key={item.id} className="table-row-hover">
@@ -358,18 +362,17 @@ export default function Inventory() {
                           </div>
                           <p className="text-xs text-[#6B7280]">Min: {item.min_stock}</p>
                         </td>
-                        <td>₹{item.price.toFixed(2)}</td>
+                        <td className="text-[#6B7280]">₹{purchasePrice.toFixed(2)}</td>
+                        <td>
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#588157]/10 text-[#588157]">
+                            +{markup}%
+                          </span>
+                        </td>
+                        <td className="font-medium text-[#3A5A40]">₹{salePrice.toFixed(2)}</td>
                         <td>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${movementBadge.class}`}>
                             {movementBadge.label}
                           </span>
-                        </td>
-                        <td>
-                          {isLowStock ? (
-                            <span className="status-indicator status-urgent">Low Stock</span>
-                          ) : (
-                            <span className="status-indicator status-active">In Stock</span>
-                          )}
                         </td>
                         <td>
                           <div className="flex items-center gap-2">
@@ -406,7 +409,7 @@ export default function Inventory() {
               <Package className="empty-state-icon" />
               <p>No inventory items found</p>
             </div>
-          )}
+          )}}
         </CardContent>
       </Card>
 
