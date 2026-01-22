@@ -378,6 +378,121 @@ class AyurCareAPITester:
             self.log_result("Update Appointment Status", False, f"Status: {status}, Response: {response}")
             return False
 
+    # ==================== PRESCRIPTION TESTS ====================
+    
+    def test_create_prescription(self):
+        """Test prescription creation with auto stock deduction"""
+        if not self.test_patient_id or not self.test_doctor_id or not self.test_inventory_id:
+            self.log_result("Create Prescription", False, "Missing patient, doctor, or inventory ID")
+            return False
+            
+        data = {
+            "patient_id": self.test_patient_id,
+            "doctor_id": self.test_doctor_id,
+            "diagnosis": "Vata imbalance with joint pain",
+            "items": [
+                {
+                    "inventory_id": self.test_inventory_id,
+                    "name": "Test Ashwagandha Powder",
+                    "quantity": 5,
+                    "dosage": "1 teaspoon twice daily",
+                    "duration": "15 days"
+                }
+            ],
+            "notes": "Take with warm milk. Avoid cold foods."
+        }
+        
+        success, response, status = self.make_request('POST', 'prescriptions', data, 200)
+        if success and 'id' in response:
+            self.test_prescription_id = response['id']
+            self.log_result("Create Prescription", True)
+            return True
+        else:
+            self.log_result("Create Prescription", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_get_prescriptions(self):
+        """Test getting prescriptions list"""
+        success, response, status = self.make_request('GET', 'prescriptions', expected_status=200)
+        if success and isinstance(response, list):
+            self.log_result("Get Prescriptions List", True)
+            return True
+        else:
+            self.log_result("Get Prescriptions List", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_get_patient_prescriptions(self):
+        """Test getting patient-specific prescriptions"""
+        if not self.test_patient_id:
+            self.log_result("Get Patient Prescriptions", False, "No test patient ID available")
+            return False
+            
+        success, response, status = self.make_request('GET', f'patients/{self.test_patient_id}/prescriptions', expected_status=200)
+        if success and isinstance(response, list):
+            self.log_result("Get Patient Prescriptions", True)
+            return True
+        else:
+            self.log_result("Get Patient Prescriptions", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_get_prescription_by_id(self):
+        """Test getting specific prescription"""
+        if not self.test_prescription_id:
+            self.log_result("Get Prescription by ID", False, "No test prescription ID available")
+            return False
+            
+        success, response, status = self.make_request('GET', f'prescriptions/{self.test_prescription_id}', expected_status=200)
+        if success and response.get('id') == self.test_prescription_id:
+            self.log_result("Get Prescription by ID", True)
+            return True
+        else:
+            self.log_result("Get Prescription by ID", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_patient_report(self):
+        """Test patient report with complete history"""
+        if not self.test_patient_id:
+            self.log_result("Patient Report", False, "No test patient ID available")
+            return False
+            
+        success, response, status = self.make_request('GET', f'patients/{self.test_patient_id}/report', expected_status=200)
+        if success and 'patient' in response and 'prescriptions' in response and 'summary' in response:
+            # Check if summary has required fields
+            summary = response.get('summary', {})
+            required_fields = ['total_prescriptions', 'total_medicines_prescribed', 'total_medicine_value', 'total_visits', 'balance_due']
+            missing_fields = [field for field in required_fields if field not in summary]
+            
+            if missing_fields:
+                self.log_result("Patient Report", False, f"Missing summary fields: {missing_fields}")
+                return False
+            else:
+                self.log_result("Patient Report", True)
+                return True
+        else:
+            self.log_result("Patient Report", False, f"Status: {status}, Response: {response}")
+            return False
+
+    def test_inventory_stock_deduction(self):
+        """Test that inventory stock was properly deducted after prescription"""
+        if not self.test_inventory_id:
+            self.log_result("Inventory Stock Deduction", False, "No test inventory ID available")
+            return False
+            
+        success, response, status = self.make_request('GET', f'inventory/{self.test_inventory_id}', expected_status=200)
+        if success and 'quantity' in response:
+            # Original quantity was 100, we used 5 in prescription, should be 95 now
+            expected_quantity = 95  # 100 - 5 (from prescription)
+            actual_quantity = response['quantity']
+            if actual_quantity == expected_quantity:
+                self.log_result("Inventory Stock Deduction", True)
+                return True
+            else:
+                self.log_result("Inventory Stock Deduction", False, f"Expected quantity: {expected_quantity}, Actual: {actual_quantity}")
+                return False
+        else:
+            self.log_result("Inventory Stock Deduction", False, f"Status: {status}, Response: {response}")
+            return False
+
     # ==================== BILLING TESTS ====================
     
     def test_create_bill(self):
