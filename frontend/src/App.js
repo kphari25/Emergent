@@ -99,8 +99,9 @@ function App() {
                     <Route path="inventory" element={<Inventory />} />
                     <Route path="appointments" element={<Appointments />} />
                     <Route path="billing" element={<Billing />} />
-                    <Route path="reports" element={<Reports />} />
-                    <Route path="hr" element={<HR />} />
+                    <Route path="reports" element={<RestrictedRoute><Reports /></RestrictedRoute>} />
+                    <Route path="hr" element={<RestrictedRoute><HR /></RestrictedRoute>} />
+                    <Route path="users" element={<AdminRoute><UserManagement /></AdminRoute>} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>
