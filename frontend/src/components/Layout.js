@@ -10,19 +10,24 @@ import {
   LogOut,
   Menu,
   X,
-  UserCog
+  UserCog,
+  ShieldCheck
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 
-const navItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/patients', label: 'Patients', icon: Users },
-  { path: '/inventory', label: 'Inventory', icon: Package },
-  { path: '/appointments', label: 'Appointments', icon: Calendar },
-  { path: '/billing', label: 'Billing', icon: Receipt },
-  { path: '/hr', label: 'HR', icon: UserCog },
-  { path: '/reports', label: 'Reports', icon: BarChart3 },
+// Roles that have restricted access (cannot see HR and Reports)
+const RESTRICTED_ROLES = ['doctor', 'front_desk', 'therapist'];
+
+const allNavItems = [
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard, restricted: false },
+  { path: '/patients', label: 'Patients', icon: Users, restricted: false },
+  { path: '/inventory', label: 'Inventory', icon: Package, restricted: false },
+  { path: '/appointments', label: 'Appointments', icon: Calendar, restricted: false },
+  { path: '/billing', label: 'Billing', icon: Receipt, restricted: false },
+  { path: '/hr', label: 'HR', icon: UserCog, restricted: true },
+  { path: '/reports', label: 'Reports', icon: BarChart3, restricted: true },
+  { path: '/users', label: 'Users', icon: ShieldCheck, adminOnly: true },
 ];
 
 export const Layout = ({ children }) => {
