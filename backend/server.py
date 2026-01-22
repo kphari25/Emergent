@@ -929,7 +929,7 @@ async def get_inventory_analytics(current_user: dict = Depends(get_current_user)
         'fast_moving_items': fast_moving_items[:10],
         'slow_moving_items': slow_moving_items[:10],
         'total_items': len(items),
-        'total_value': sum(i['quantity'] * i['price'] for i in items)
+        'total_value': sum(i['quantity'] * i.get('purchase_price', i.get('price', 0)) for i in items)
     }
 
 @api_router.get("/reports/revenue")
