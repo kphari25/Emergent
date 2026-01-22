@@ -35,6 +35,23 @@ export const Layout = ({ children }) => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Filter nav items based on user role
+  const navItems = useMemo(() => {
+    if (!user) return [];
+    const userRole = user.role;
+    const isAdmin = userRole === 'admin';
+    const isRestricted = RESTRICTED_ROLES.includes(userRole);
+    
+    return allNavItems.filter(item => {
+      // Admin-only items (like User Management)
+      if (item.adminOnly) return isAdmin;
+      // Restricted items (HR, Reports) - hidden for restricted roles
+      if (item.restricted) return !isRestricted;
+      // All other items are visible to everyone
+      return true;
+    });
+  }, [user]);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
