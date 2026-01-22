@@ -231,7 +231,6 @@ export default function Billing() {
                     <Button type="button" variant="outline" onClick={addItemToBill} className="rounded-xl">
                       <Plus className="w-4 h-4" />
                     </Button>
-                    </Button>
                   </div>
                 </div>
               </div>
