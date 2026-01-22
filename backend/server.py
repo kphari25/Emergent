@@ -165,6 +165,32 @@ class PaymentRequest(BaseModel):
     amount: float
     payment_method: str
 
+class PrescriptionItem(BaseModel):
+    inventory_id: str
+    name: str
+    quantity: int
+    dosage: str  # e.g., "1 tablet twice daily"
+    duration: str  # e.g., "7 days"
+
+class PrescriptionCreate(BaseModel):
+    patient_id: str
+    doctor_id: Optional[str] = None
+    diagnosis: str
+    items: List[PrescriptionItem]
+    notes: Optional[str] = ""
+
+class PrescriptionResponse(BaseModel):
+    id: str
+    patient_id: str
+    patient_name: str
+    doctor_id: Optional[str]
+    doctor_name: Optional[str]
+    diagnosis: str
+    items: List[dict]
+    notes: str
+    status: str  # active, completed, cancelled
+    created_at: str
+
 class RoomCreate(BaseModel):
     room_number: str
     room_type: str  # general, private, icu
