@@ -58,12 +58,17 @@ export default function Billing() {
   };
 
   const addItemToBill = () => {
-    if (!newItem.name || !newItem.price) return;
+    if (!newItem.name || !newItem.sale_price) return;
     setNewBill({
       ...newBill,
-      items: [...newBill.items, { ...newItem, quantity: parseInt(newItem.quantity), price: parseFloat(newItem.price) }]
+      items: [...newBill.items, { 
+        ...newItem, 
+        quantity: parseInt(newItem.quantity), 
+        sale_price: parseFloat(newItem.sale_price),
+        purchase_price: parseFloat(newItem.purchase_price || 0)
+      }]
     });
-    setNewItem({ name: '', quantity: 1, price: '' });
+    setNewItem({ name: '', quantity: 1, sale_price: '', purchase_price: '' });
   };
 
   const removeItemFromBill = (index) => {
@@ -76,8 +81,22 @@ export default function Billing() {
   const selectInventoryItem = (itemId) => {
     const item = inventory.find(i => i.id === itemId);
     if (item) {
-      setNewItem({ name: item.name, quantity: 1, price: item.price.toString() });
+      const purchasePrice = item.purchase_price || item.price || 0;
+      const salePrice = item.sale_price || (purchasePrice * 1.2);
+      setNewItem({ 
+        name: item.name, 
+        quantity: 1, 
+        sale_price: salePrice.toString(),
+        purchase_price: purchasePrice.toString()
+      });
     }
+  };
+
+  const calculateBillProfit = () => {
+    return newBill.items.reduce((total, item) => {
+      const profit = (item.sale_price - (item.purchase_price || 0)) * item.quantity;
+      return total + profit;
+    }, 0);
   };
 
   const handleCreateBill = async (e) => {
