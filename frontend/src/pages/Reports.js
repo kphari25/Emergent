@@ -207,7 +207,7 @@ export default function Reports() {
           </div>
 
           {/* Revenue & Expense Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <Card className="metric-card card-hover bg-[#588157]/5 border-[#588157]/20" data-testid="total-revenue-card">
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between">
@@ -220,6 +220,23 @@ export default function Reports() {
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-[#588157]/20 flex items-center justify-center">
                     <TrendingUp className="w-6 h-6 text-[#588157]" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="metric-card card-hover bg-[#3A5A40]/5 border-[#3A5A40]/20" data-testid="medicine-profit-card">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="metric-label">Medicine Profit</p>
+                    <p className="metric-value text-[#3A5A40]">₹{(financialReport?.profit_loss?.medicine_profit || 0).toLocaleString()}</p>
+                    <p className="text-sm text-[#6B7280] mt-1">
+                      Cost: ₹{(financialReport?.revenue?.medicine_cost || 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-[#3A5A40]/20 flex items-center justify-center">
+                    <Pill className="w-6 h-6 text-[#3A5A40]" />
                   </div>
                 </div>
               </CardContent>
