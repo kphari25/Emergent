@@ -852,26 +852,6 @@ async def import_patients(file: UploadFile = File(...), current_user: dict = Dep
         logger.error(f"Import error: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Import failed: {str(e)}")
 
-@api_router.get("/inventory/template")
-async def get_inventory_template(current_user: dict = Depends(get_current_user)):
-    """Get CSV template for inventory import"""
-    return {
-        "columns": ["name", "category", "quantity", "unit", "min_stock", "purchase_price", "markup_percentage", "supplier", "batch_number", "expiry_date"],
-        "sample_row": ["Ashwagandha Capsules", "medicines", "100", "pieces", "20", "150", "25", "Himalaya", "BATCH001", "2025-12-31"],
-        "categories": ["herbs", "medicines", "equipment", "consumables"],
-        "units": ["pieces", "bottles", "kg", "grams", "ml", "liters", "strips", "boxes"]
-    }
-
-@api_router.get("/patients/template")
-async def get_patients_template(current_user: dict = Depends(get_current_user)):
-    """Get CSV template for patient import"""
-    return {
-        "columns": ["name", "age", "gender", "phone", "address", "medical_history", "prakriti"],
-        "sample_row": ["Rajesh Kumar", "45", "male", "9876543210", "123 Main St, City", "Hypertension", "Vata-Pitta"],
-        "genders": ["male", "female", "other"],
-        "prakriti_types": ["Vata", "Pitta", "Kapha", "Vata-Pitta", "Pitta-Kapha", "Vata-Kapha", "Tridosha"]
-    }
-
 # ==================== APPOINTMENT ROUTES ====================
 
 @api_router.post("/appointments", response_model=AppointmentResponse)
