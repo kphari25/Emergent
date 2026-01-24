@@ -100,6 +100,52 @@ export default function Inventory() {
     }
   };
 
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validExtensions = ['csv', 'xlsx', 'xls'];
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (!validExtensions.includes(ext)) {
+      toast.error('Please upload a CSV or Excel file (.csv, .xlsx, .xls)');
+      return;
+    }
+
+    setImporting(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await axios.post(`${API_URL}/inventory/import`, formData, {
+        headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success(res.data.message);
+      if (res.data.errors?.length > 0) {
+        res.data.errors.forEach(err => toast.warning(err));
+      }
+      setImportDialogOpen(false);
+      fetchInventory();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Import failed');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const downloadTemplate = () => {
+    const headers = ['name', 'category', 'quantity', 'unit', 'min_stock', 'purchase_price', 'markup_percentage', 'supplier', 'batch_number', 'expiry_date'];
+    const sample = ['Ashwagandha Capsules', 'medicines', '100', 'pieces', '20', '150', '25', 'Himalaya', 'BATCH001', '2025-12-31'];
+    const csvContent = [headers.join(','), sample.join(',')].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'inventory_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleDeleteItem = async (itemId) => {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
     try {
