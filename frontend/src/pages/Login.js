@@ -162,72 +162,7 @@ export default function Login() {
                 </div>
               </form>
             </TabsContent>
-            
-            <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="register-name" className="text-[#374151] font-medium">Full Name</Label>
-                  <Input
-                    id="register-name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    className="h-12 bg-white border-[#E2E8F0] focus:border-[#3A5A40] rounded-xl"
-                    data-testid="register-name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-email" className="text-[#374151] font-medium">Email</Label>
-                  <Input
-                    id="register-email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="h-12 bg-white border-[#E2E8F0] focus:border-[#3A5A40] rounded-xl"
-                    data-testid="register-email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-password" className="text-[#374151] font-medium">Password</Label>
-                  <Input
-                    id="register-password"
-                    type="password"
-                    placeholder="Create a password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="h-12 bg-white border-[#E2E8F0] focus:border-[#3A5A40] rounded-xl"
-                    data-testid="register-password"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-role" className="text-[#374151] font-medium">Role</Label>
-                  <Select value={role} onValueChange={setRole}>
-                    <SelectTrigger className="h-12 bg-white border-[#E2E8F0] rounded-xl" data-testid="register-role">
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="doctor">Doctor</SelectItem>
-                      <SelectItem value="staff">Staff</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full h-12 bg-[#3A5A40] hover:bg-[#344E41] text-white rounded-full font-medium text-base btn-active"
-                  data-testid="register-submit"
-                >
-                  {isLoading ? <span className="spinner"></span> : 'Create Account'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+          </div>
         </div>
       </div>
 
