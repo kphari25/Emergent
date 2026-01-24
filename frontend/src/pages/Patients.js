@@ -169,11 +169,58 @@ export default function Patients() {
           <h1 className="page-title">Patients</h1>
           <p className="page-subtitle">Manage patient registrations and check-ins</p>
         </div>
-        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#3A5A40] hover:bg-[#344E41] rounded-full px-6" data-testid="add-patient-btn">
-              <Plus className="w-5 h-5 mr-2" />
-              Add Patient
+        <div className="flex gap-2">
+          <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="rounded-full border-[#3A5A40] text-[#3A5A40] hover:bg-[#3A5A40]/10" data-testid="import-patients-btn">
+                <Upload className="w-5 h-5 mr-2" />
+                Import
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle style={{ fontFamily: 'Playfair Display' }}>Import Patients</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <div className="p-4 bg-[#DAD7CD]/20 rounded-xl">
+                  <p className="text-sm text-[#6B7280] mb-3">Upload a CSV or Excel file with patient data. Required column: <strong>name</strong></p>
+                  <Button variant="outline" size="sm" className="rounded-full text-xs" onClick={downloadTemplate}>
+                    <Download className="w-4 h-4 mr-1" />
+                    Download Template
+                  </Button>
+                </div>
+                <div className="border-2 border-dashed border-[#DAD7CD] rounded-xl p-6 text-center">
+                  <FileSpreadsheet className="w-12 h-12 mx-auto text-[#6B7280] mb-3" />
+                  <p className="text-sm text-[#6B7280] mb-3">Drag and drop or click to select</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handleImportFile}
+                    className="hidden"
+                    id="patients-import"
+                    data-testid="patients-import-input"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={importing}
+                  >
+                    {importing ? <span className="spinner mr-2"></span> : <Upload className="w-4 h-4 mr-2" />}
+                    {importing ? 'Importing...' : 'Select File'}
+                  </Button>
+                </div>
+                <p className="text-xs text-[#6B7280]">Supported formats: .csv, .xlsx, .xls</p>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-[#3A5A40] hover:bg-[#344E41] rounded-full px-6" data-testid="add-patient-btn">
+                <Plus className="w-5 h-5 mr-2" />
+                Add Patient
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
