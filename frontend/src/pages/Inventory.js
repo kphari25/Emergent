@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Plus, Search, Package, Leaf, Pill, AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Plus, Search, Package, Leaf, Pill, AlertTriangle, TrendingUp, TrendingDown, Minus, Upload, Download, FileSpreadsheet } from 'lucide-react';
 
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -28,7 +28,10 @@ export default function Inventory() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef(null);
 
   const [newItem, setNewItem] = useState({
     name: '', category: 'medicines', quantity: '', unit: 'pieces',
