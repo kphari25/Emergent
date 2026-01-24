@@ -649,6 +649,209 @@ async def delete_inventory_item(item_id: str, current_user: dict = Depends(get_c
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "Item deleted"}
 
+# ==================== IMPORT ENDPOINTS ====================
+
+@api_router.post("/inventory/import")
+async def import_inventory(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    """
+    Import inventory from CSV or Excel file.
+    Expected columns: name, category, quantity, unit, min_stock, purchase_price, markup_percentage, supplier, batch_number, expiry_date
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
+    file_ext = file.filename.lower().split('.')[-1]
+    if file_ext not in ['csv', 'xlsx', 'xls']:
+        raise HTTPException(status_code=400, detail="Invalid file format. Use CSV or Excel (xlsx/xls)")
+    
+    try:
+        content = await file.read()
+        
+        if file_ext == 'csv':
+            df = pd.read_csv(io.BytesIO(content))
+        else:
+            df = pd.read_excel(io.BytesIO(content))
+        
+        # Normalize column names
+        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
+        
+        required_cols = ['name', 'quantity']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            raise HTTPException(status_code=400, detail=f"Missing required columns: {', '.join(missing_cols)}")
+        
+        imported = 0
+        skipped = 0
+        errors = []
+        
+        for idx, row in df.iterrows():
+            try:
+                name = str(row.get('name', '')).strip()
+                if not name or pd.isna(row.get('name')):
+                    skipped += 1
+                    continue
+                
+                # Check if item already exists
+                existing = await db.inventory.find_one({'name': {'$regex': f'^{name}$', '$options': 'i'}})
+                if existing:
+                    errors.append(f"Row {idx+2}: '{name}' already exists (skipped)")
+                    skipped += 1
+                    continue
+                
+                quantity = int(row.get('quantity', 0)) if not pd.isna(row.get('quantity')) else 0
+                purchase_price = float(row.get('purchase_price', 0)) if not pd.isna(row.get('purchase_price')) else 0
+                markup = float(row.get('markup_percentage', 20)) if not pd.isna(row.get('markup_percentage')) else 20
+                sale_price = calculate_sale_price(purchase_price, markup)
+                
+                item_doc = {
+                    'id': str(uuid.uuid4()),
+                    'name': name,
+                    'category': str(row.get('category', 'medicines')).strip().lower() if not pd.isna(row.get('category')) else 'medicines',
+                    'quantity': quantity,
+                    'unit': str(row.get('unit', 'pieces')).strip() if not pd.isna(row.get('unit')) else 'pieces',
+                    'min_stock': int(row.get('min_stock', 10)) if not pd.isna(row.get('min_stock')) else 10,
+                    'purchase_price': purchase_price,
+                    'markup_percentage': markup,
+                    'sale_price': sale_price,
+                    'supplier': str(row.get('supplier', '')).strip() if not pd.isna(row.get('supplier')) else '',
+                    'batch_number': str(row.get('batch_number', '')).strip() if not pd.isna(row.get('batch_number')) else '',
+                    'expiry_date': str(row.get('expiry_date', '')).strip() if not pd.isna(row.get('expiry_date')) else '',
+                    'movement_count': 0,
+                    'movement_status': 'slow',
+                    'created_at': datetime.now(timezone.utc).isoformat()
+                }
+                await db.inventory.insert_one(item_doc)
+                imported += 1
+            except Exception as e:
+                errors.append(f"Row {idx+2}: {str(e)}")
+                skipped += 1
+        
+        return {
+            "message": f"Import completed. {imported} items imported, {skipped} skipped.",
+            "imported": imported,
+            "skipped": skipped,
+            "errors": errors[:10]  # Return first 10 errors
+        }
+    except Exception as e:
+        logger.error(f"Import error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Import failed: {str(e)}")
+
+@api_router.post("/patients/import")
+async def import_patients(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    """
+    Import patients from CSV or Excel file.
+    Expected columns: name, age, gender, phone, address, medical_history, prakriti
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
+    file_ext = file.filename.lower().split('.')[-1]
+    if file_ext not in ['csv', 'xlsx', 'xls']:
+        raise HTTPException(status_code=400, detail="Invalid file format. Use CSV or Excel (xlsx/xls)")
+    
+    try:
+        content = await file.read()
+        
+        if file_ext == 'csv':
+            df = pd.read_csv(io.BytesIO(content))
+        else:
+            df = pd.read_excel(io.BytesIO(content))
+        
+        # Normalize column names
+        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_')
+        
+        required_cols = ['name']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            raise HTTPException(status_code=400, detail=f"Missing required columns: {', '.join(missing_cols)}")
+        
+        imported = 0
+        skipped = 0
+        errors = []
+        
+        for idx, row in df.iterrows():
+            try:
+                name = str(row.get('name', '')).strip()
+                if not name or pd.isna(row.get('name')):
+                    skipped += 1
+                    continue
+                
+                phone = str(row.get('phone', '')).strip() if not pd.isna(row.get('phone')) else ''
+                
+                # Check if patient already exists (by name and phone)
+                if phone:
+                    existing = await db.patients.find_one({
+                        'name': {'$regex': f'^{name}$', '$options': 'i'},
+                        'phone': phone
+                    })
+                    if existing:
+                        errors.append(f"Row {idx+2}: '{name}' with phone '{phone}' already exists (skipped)")
+                        skipped += 1
+                        continue
+                
+                age = 0
+                if not pd.isna(row.get('age')):
+                    try:
+                        age = int(float(row.get('age', 0)))
+                    except:
+                        age = 0
+                
+                gender = str(row.get('gender', 'male')).strip().lower() if not pd.isna(row.get('gender')) else 'male'
+                if gender not in ['male', 'female', 'other']:
+                    gender = 'male'
+                
+                patient_doc = {
+                    'id': str(uuid.uuid4()),
+                    'name': name,
+                    'age': age,
+                    'gender': gender,
+                    'phone': phone,
+                    'address': str(row.get('address', '')).strip() if not pd.isna(row.get('address')) else '',
+                    'medical_history': str(row.get('medical_history', '')).strip() if not pd.isna(row.get('medical_history')) else '',
+                    'prakriti': str(row.get('prakriti', '')).strip() if not pd.isna(row.get('prakriti')) else '',
+                    'status': 'active',
+                    'patient_type': 'None',
+                    'room_number': None,
+                    'token_number': None,
+                    'admission_date': None,
+                    'created_at': datetime.now(timezone.utc).isoformat()
+                }
+                await db.patients.insert_one(patient_doc)
+                imported += 1
+            except Exception as e:
+                errors.append(f"Row {idx+2}: {str(e)}")
+                skipped += 1
+        
+        return {
+            "message": f"Import completed. {imported} patients imported, {skipped} skipped.",
+            "imported": imported,
+            "skipped": skipped,
+            "errors": errors[:10]
+        }
+    except Exception as e:
+        logger.error(f"Import error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Import failed: {str(e)}")
+
+@api_router.get("/inventory/template")
+async def get_inventory_template(current_user: dict = Depends(get_current_user)):
+    """Get CSV template for inventory import"""
+    return {
+        "columns": ["name", "category", "quantity", "unit", "min_stock", "purchase_price", "markup_percentage", "supplier", "batch_number", "expiry_date"],
+        "sample_row": ["Ashwagandha Capsules", "medicines", "100", "pieces", "20", "150", "25", "Himalaya", "BATCH001", "2025-12-31"],
+        "categories": ["herbs", "medicines", "equipment", "consumables"],
+        "units": ["pieces", "bottles", "kg", "grams", "ml", "liters", "strips", "boxes"]
+    }
+
+@api_router.get("/patients/template")
+async def get_patients_template(current_user: dict = Depends(get_current_user)):
+    """Get CSV template for patient import"""
+    return {
+        "columns": ["name", "age", "gender", "phone", "address", "medical_history", "prakriti"],
+        "sample_row": ["Rajesh Kumar", "45", "male", "9876543210", "123 Main St, City", "Hypertension", "Vata-Pitta"],
+        "genders": ["male", "female", "other"],
+        "prakriti_types": ["Vata", "Pitta", "Kapha", "Vata-Pitta", "Pitta-Kapha", "Vata-Kapha", "Tridosha"]
+    }
+
 # ==================== APPOINTMENT ROUTES ====================
 
 @api_router.post("/appointments", response_model=AppointmentResponse)
