@@ -318,6 +318,7 @@ export default function Patients() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
