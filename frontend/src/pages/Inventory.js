@@ -522,6 +522,16 @@ export default function Inventory() {
                             <Button
                               size="sm"
                               variant="outline"
+                              className="rounded-full border-[#3A5A40] text-[#3A5A40] hover:bg-[#3A5A40]/10"
+                              onClick={() => openEditDialog(item)}
+                              data-testid={`edit-item-btn-${item.id}`}
+                            >
+                              <Pencil className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
                               className="rounded-full"
                               onClick={() => {
                                 setSelectedItem(item);
@@ -555,6 +565,146 @@ export default function Inventory() {
           )}}
         </CardContent>
       </Card>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: 'Playfair Display' }}>Edit Item</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditItem} className="space-y-4 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2 col-span-2">
+                <Label>Item Name</Label>
+                <Input
+                  value={editItem.name}
+                  onChange={(e) => setEditItem({ ...editItem, name: e.target.value })}
+                  required
+                  className="rounded-xl"
+                  data-testid="edit-item-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select value={editItem.category} onValueChange={(v) => setEditItem({ ...editItem, category: v })}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="herbs">Herbs</SelectItem>
+                    <SelectItem value="medicines">Medicines</SelectItem>
+                    <SelectItem value="equipment">Equipment</SelectItem>
+                    <SelectItem value="consumables">Consumables</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Unit</Label>
+                <Select value={editItem.unit} onValueChange={(v) => setEditItem({ ...editItem, unit: v })}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pieces">Pieces</SelectItem>
+                    <SelectItem value="bottles">Bottles</SelectItem>
+                    <SelectItem value="kg">Kilograms</SelectItem>
+                    <SelectItem value="grams">Grams</SelectItem>
+                    <SelectItem value="ml">Milliliters</SelectItem>
+                    <SelectItem value="liters">Liters</SelectItem>
+                    <SelectItem value="strips">Strips</SelectItem>
+                    <SelectItem value="boxes">Boxes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  value={editItem.quantity}
+                  onChange={(e) => setEditItem({ ...editItem, quantity: e.target.value })}
+                  required
+                  min="0"
+                  className="rounded-xl"
+                  data-testid="edit-item-quantity"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Min Stock Alert</Label>
+                <Input
+                  type="number"
+                  value={editItem.min_stock}
+                  onChange={(e) => setEditItem({ ...editItem, min_stock: e.target.value })}
+                  required
+                  min="0"
+                  className="rounded-xl"
+                  data-testid="edit-item-min-stock"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Purchase Price (₹)</Label>
+                <Input
+                  type="number"
+                  value={editItem.purchase_price}
+                  onChange={(e) => setEditItem({ ...editItem, purchase_price: e.target.value })}
+                  required
+                  min="0"
+                  step="0.01"
+                  className="rounded-xl"
+                  data-testid="edit-item-purchase-price"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Markup (%)</Label>
+                <Input
+                  type="number"
+                  value={editItem.markup_percentage}
+                  onChange={(e) => setEditItem({ ...editItem, markup_percentage: e.target.value })}
+                  required
+                  min="0"
+                  className="rounded-xl"
+                  data-testid="edit-item-markup"
+                />
+              </div>
+              <div className="col-span-2 p-3 bg-[#3A5A40]/10 rounded-xl">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-[#6B7280]">Calculated Sale Price:</span>
+                  <span className="text-lg font-semibold text-[#3A5A40]">
+                    ₹{calculateSalePrice(editItem.purchase_price, editItem.markup_percentage)}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Supplier</Label>
+                <Input
+                  value={editItem.supplier}
+                  onChange={(e) => setEditItem({ ...editItem, supplier: e.target.value })}
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Batch Number</Label>
+                <Input
+                  value={editItem.batch_number}
+                  onChange={(e) => setEditItem({ ...editItem, batch_number: e.target.value })}
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Expiry Date</Label>
+                <Input
+                  type="date"
+                  value={editItem.expiry_date}
+                  onChange={(e) => setEditItem({ ...editItem, expiry_date: e.target.value })}
+                  className="rounded-xl"
+                />
+              </div>
+            </div>
+            <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="save-edit-btn">
+              Save Changes
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Stock Update Dialog */}
       <Dialog open={stockDialogOpen} onOpenChange={setStockDialogOpen}>
