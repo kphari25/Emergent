@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Plus, Search, Package, Leaf, Pill, AlertTriangle, TrendingUp, TrendingDown, Minus, Upload, Download, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, Package, Leaf, Pill, AlertTriangle, TrendingUp, TrendingDown, Minus, Upload, Download, FileSpreadsheet, Pencil } from 'lucide-react';
 
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
