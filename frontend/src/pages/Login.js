@@ -105,13 +105,7 @@ export default function Login() {
             </p>
           </div>
 
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6 bg-[#DAD7CD]/30">
-              <TabsTrigger value="login" data-testid="login-tab">Sign In</TabsTrigger>
-              <TabsTrigger value="register" data-testid="register-tab">Register</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
+          <div className="w-full">
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
                   <Label htmlFor="login-email" className="text-[#374151] font-medium">Email</Label>
