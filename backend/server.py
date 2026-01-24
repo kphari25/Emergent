@@ -588,6 +588,16 @@ async def get_inventory(category: Optional[str] = None, current_user: dict = Dep
     # Add sale_price to each item (for backward compatibility)
     return [add_sale_price_to_item(item) for item in items]
 
+@api_router.get("/inventory/template")
+async def get_inventory_template(current_user: dict = Depends(get_current_user)):
+    """Get CSV template for inventory import"""
+    return {
+        "columns": ["name", "category", "quantity", "unit", "min_stock", "purchase_price", "markup_percentage", "supplier", "batch_number", "expiry_date"],
+        "sample_row": ["Ashwagandha Capsules", "medicines", "100", "pieces", "20", "150", "25", "Himalaya", "BATCH001", "2025-12-31"],
+        "categories": ["herbs", "medicines", "equipment", "consumables"],
+        "units": ["pieces", "bottles", "kg", "grams", "ml", "liters", "strips", "boxes"]
+    }
+
 @api_router.get("/inventory/{item_id}", response_model=InventoryItemResponse)
 async def get_inventory_item(item_id: str, current_user: dict = Depends(get_current_user)):
     item = await db.inventory.find_one({'id': item_id}, {'_id': 0})
