@@ -10,6 +10,7 @@ Build a comprehensive Ayurvedic hospital management program with:
 - HR module (staff management, salary payments)
 - Prescription management with auto stock deduction
 - Role-Based Access Control (RBAC) with user management
+- Data import from CSV/Excel for inventory and patients
 
 ## Architecture
 - **Frontend**: React 19 + Tailwind CSS + shadcn/ui
@@ -45,17 +46,28 @@ Build a comprehensive Ayurvedic hospital management program with:
 - Expense Management
 - Prescription Management with auto stock deduction
 
-### Phase 3 - RBAC & User Management ✅ (January 22, 2026)
+### Phase 3 - RBAC & User Management ✅
 - Role-Based Access Control (5 roles)
 - User Management page (Admin only)
-  - View all users with role badges
-  - Create new users with role assignment
-  - Reset user passwords
-  - Delete users
-- Role-based navigation filtering (restricted roles don't see HR/Reports/Users)
+- Role-based navigation filtering
 - Route protection for restricted pages
 - Forgot Password flow (MOCKED - tokens logged to console)
 - Backend API protection for sensitive endpoints
+
+### Phase 4 - Data Import & UI Cleanup ✅ (January 24, 2026)
+- **Removed Register button** from login page (users created via Admin only)
+- **Inventory Import**: CSV/Excel import with template download
+- **Patient Import**: CSV/Excel import with template download
+- Import supports: .csv, .xlsx, .xls formats
+- Duplicate detection prevents reimporting existing records
+
+## Import File Format
+
+### Inventory Import Columns
+`name, category, quantity, unit, min_stock, purchase_price, markup_percentage, supplier, batch_number, expiry_date`
+
+### Patient Import Columns
+`name, age, gender, phone, address, medical_history, prakriti`
 
 ## Test Credentials
 | Role | Email | Password |
@@ -66,11 +78,12 @@ Build a comprehensive Ayurvedic hospital management program with:
 ## Key Files
 - `/app/backend/server.py` - All backend APIs
 - `/app/frontend/src/pages/` - Frontend pages
-- `/app/frontend/src/components/Layout.js` - Navigation with RBAC
-- `/app/frontend/src/context/AuthContext.js` - Auth state management
+- `/app/frontend/src/pages/Inventory.js` - Inventory with import
+- `/app/frontend/src/pages/Patients.js` - Patients with import
+- `/app/frontend/src/pages/Login.js` - Login (no register)
 
 ## MOCKED Features
-⚠️ **Password Reset Email**: Reset tokens are logged to server console instead of being emailed. No email service is configured.
+⚠️ **Password Reset Email**: Reset tokens are logged to server console instead of being emailed.
 
 ## Prioritized Backlog
 
