@@ -142,7 +142,6 @@ export default function Login() {
                   </button>
                 </div>
               </form>
-            </TabsContent>
           </div>
         </div>
       </div>
