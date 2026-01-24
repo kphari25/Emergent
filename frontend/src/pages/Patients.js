@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Plus, UserPlus, LogIn, LogOut, Search, User, Bed, Ticket, Eye } from 'lucide-react';
+import { Plus, UserPlus, LogIn, LogOut, Search, User, Bed, Ticket, Eye, Upload, Download, FileSpreadsheet } from 'lucide-react';
 
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -26,7 +26,10 @@ export default function Patients() {
   const [filterType, setFilterType] = useState('all');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [checkinDialogOpen, setCheckinDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef(null);
 
   const [newPatient, setNewPatient] = useState({
     name: '', age: '', gender: 'male', phone: '', address: '', medical_history: '', prakriti: ''
