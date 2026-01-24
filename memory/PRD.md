@@ -54,20 +54,16 @@ Build a comprehensive Ayurvedic hospital management program with:
 - Forgot Password flow (MOCKED - tokens logged to console)
 - Backend API protection for sensitive endpoints
 
-### Phase 4 - Data Import & UI Cleanup ✅ (January 24, 2026)
-- **Removed Register button** from login page (users created via Admin only)
+### Phase 4 - Data Import & Inventory Edit ✅ (January 24, 2026)
+- Removed Register button from login page
 - **Inventory Import**: CSV/Excel import with template download
 - **Patient Import**: CSV/Excel import with template download
-- Import supports: .csv, .xlsx, .xls formats
-- Duplicate detection prevents reimporting existing records
-
-## Import File Format
-
-### Inventory Import Columns
-`name, category, quantity, unit, min_stock, purchase_price, markup_percentage, supplier, batch_number, expiry_date`
-
-### Patient Import Columns
-`name, age, gender, phone, address, medical_history, prakriti`
+- **Inventory Edit**: Full edit dialog for price, quantity, and all item fields
+  - Edit Name, Category, Unit
+  - Edit Quantity, Min Stock Alert
+  - Edit Purchase Price, Markup %
+  - Auto-calculated Sale Price display
+  - Edit Supplier, Batch Number, Expiry Date
 
 ## Test Credentials
 | Role | Email | Password |
@@ -77,8 +73,7 @@ Build a comprehensive Ayurvedic hospital management program with:
 
 ## Key Files
 - `/app/backend/server.py` - All backend APIs
-- `/app/frontend/src/pages/` - Frontend pages
-- `/app/frontend/src/pages/Inventory.js` - Inventory with import
+- `/app/frontend/src/pages/Inventory.js` - Inventory with edit & import
 - `/app/frontend/src/pages/Patients.js` - Patients with import
 - `/app/frontend/src/pages/Login.js` - Login (no register)
 
