@@ -106,6 +106,46 @@ export default function Inventory() {
     }
   };
 
+  const openEditDialog = (item) => {
+    setSelectedItem(item);
+    setEditItem({
+      name: item.name || '',
+      category: item.category || 'medicines',
+      quantity: item.quantity?.toString() || '',
+      unit: item.unit || 'pieces',
+      min_stock: item.min_stock?.toString() || '',
+      purchase_price: (item.purchase_price || item.price || 0).toString(),
+      markup_percentage: (item.markup_percentage || 20).toString(),
+      supplier: item.supplier || '',
+      batch_number: item.batch_number || '',
+      expiry_date: item.expiry_date || ''
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditItem = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API_URL}/inventory/${selectedItem.id}`, {
+        name: editItem.name,
+        category: editItem.category,
+        quantity: parseInt(editItem.quantity),
+        unit: editItem.unit,
+        min_stock: parseInt(editItem.min_stock),
+        purchase_price: parseFloat(editItem.purchase_price),
+        markup_percentage: parseFloat(editItem.markup_percentage),
+        supplier: editItem.supplier,
+        batch_number: editItem.batch_number,
+        expiry_date: editItem.expiry_date
+      }, { headers: getAuthHeaders() });
+      toast.success('Item updated successfully');
+      setEditDialogOpen(false);
+      fetchInventory();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update item');
+    }
+  };
+
   const handleImportFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
