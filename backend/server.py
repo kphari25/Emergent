@@ -444,6 +444,16 @@ async def get_patients(patient_type: Optional[str] = None, current_user: dict = 
     patients = await db.patients.find(query, {'_id': 0}).to_list(1000)
     return patients
 
+@api_router.get("/patients/template")
+async def get_patients_template(current_user: dict = Depends(get_current_user)):
+    """Get CSV template for patient import"""
+    return {
+        "columns": ["name", "age", "gender", "phone", "address", "medical_history", "prakriti"],
+        "sample_row": ["Rajesh Kumar", "45", "male", "9876543210", "123 Main St, City", "Hypertension", "Vata-Pitta"],
+        "genders": ["male", "female", "other"],
+        "prakriti_types": ["Vata", "Pitta", "Kapha", "Vata-Pitta", "Pitta-Kapha", "Vata-Kapha", "Tridosha"]
+    }
+
 @api_router.get("/patients/{patient_id}", response_model=PatientResponse)
 async def get_patient(patient_id: str, current_user: dict = Depends(get_current_user)):
     patient = await db.patients.find_one({'id': patient_id}, {'_id': 0})
