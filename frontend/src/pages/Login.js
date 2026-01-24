@@ -36,20 +36,6 @@ export default function Login() {
     }
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      await register(email, password, name, role);
-      toast.success('Account created successfully!');
-      navigate('/');
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Registration failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setIsLoading(true);
