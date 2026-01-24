@@ -28,12 +28,18 @@ export default function Inventory() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef(null);
 
   const [newItem, setNewItem] = useState({
+    name: '', category: 'medicines', quantity: '', unit: 'pieces',
+    min_stock: '', purchase_price: '', markup_percentage: '20', supplier: '', batch_number: '', expiry_date: ''
+  });
+
+  const [editItem, setEditItem] = useState({
     name: '', category: 'medicines', quantity: '', unit: 'pieces',
     min_stock: '', purchase_price: '', markup_percentage: '20', supplier: '', batch_number: '', expiry_date: ''
   });
