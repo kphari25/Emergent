@@ -1125,7 +1125,19 @@ async def create_bill(bill: BillCreate, current_user: dict = Depends(get_current
         total_cost += item_cost
     
     total_profit = total_sale - total_cost
-    total_amount = total_sale + bill.treatment_charges + bill.room_charges
+    
+    # Calculate subtotal with all charges
+    subtotal = (total_sale + bill.treatment_charges + bill.room_charges + 
+                bill.consultation_charges + bill.therapy_charges + bill.other_charges)
+    
+    # Apply discount
+    discounted_total = subtotal - bill.discount
+    
+    # Calculate GST
+    gst_amount = bill.gst_amount if bill.gst_amount > 0 else (discounted_total * bill.gst_rate / 100 if bill.gst_rate > 0 else 0)
+    
+    # Final total
+    total_amount = bill.total_amount if bill.total_amount > 0 else (discounted_total + gst_amount)
     
     bill_id = str(uuid.uuid4())
     bill_doc = {
@@ -1135,11 +1147,19 @@ async def create_bill(bill: BillCreate, current_user: dict = Depends(get_current
         'items': items_with_profit,
         'treatment_charges': bill.treatment_charges,
         'room_charges': bill.room_charges,
+        'consultation_charges': bill.consultation_charges,
+        'therapy_charges': bill.therapy_charges,
+        'other_charges': bill.other_charges,
+        'discount': bill.discount,
+        'subtotal': subtotal,
+        'gst_rate': bill.gst_rate,
+        'gst_amount': gst_amount,
         'total_amount': total_amount,
         'total_cost': total_cost,
         'total_profit': total_profit,
         'paid_amount': 0,
         'status': 'pending',
+        'payment_method': None,
         'notes': bill.notes or "",
         'created_at': datetime.now(timezone.utc).isoformat()
     }
