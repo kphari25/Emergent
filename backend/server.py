@@ -1083,12 +1083,28 @@ async def update_prescription_status(prescription_id: str, status: str, current_
 # ==================== BILLING ROUTES ====================
 
 def ensure_bill_profit_fields(bill: dict) -> dict:
-    """Ensure bill has profit fields for backward compatibility"""
+    """Ensure bill has all required fields for backward compatibility"""
     if bill:
         if 'total_cost' not in bill:
             bill['total_cost'] = 0
         if 'total_profit' not in bill:
             bill['total_profit'] = 0
+        if 'consultation_charges' not in bill:
+            bill['consultation_charges'] = 0
+        if 'therapy_charges' not in bill:
+            bill['therapy_charges'] = 0
+        if 'other_charges' not in bill:
+            bill['other_charges'] = 0
+        if 'discount' not in bill:
+            bill['discount'] = 0
+        if 'subtotal' not in bill:
+            bill['subtotal'] = bill.get('total_amount', 0)
+        if 'gst_rate' not in bill:
+            bill['gst_rate'] = 0
+        if 'gst_amount' not in bill:
+            bill['gst_amount'] = 0
+        if 'payment_method' not in bill:
+            bill['payment_method'] = None
     return bill
 
 @api_router.post("/bills", response_model=BillResponse)
