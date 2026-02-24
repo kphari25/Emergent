@@ -54,31 +54,48 @@ Build a comprehensive Ayurvedic hospital management program with:
 - Patient Import (CSV/Excel)
 - Inventory Edit (full edit dialog)
 
-### Phase 5 - Enhanced Billing with GST & Printable Invoices ✅ (Latest)
-**Billing Features:**
-- Consultation charges
-- Treatment charges
-- Therapy charges
-- Room charges (for IP patients)
-- Other charges
-- Discount field
-- **GST (18%)** toggle with auto-calculation
-- Bill Summary with live totals
+### Phase 5 - Separate IP/OP Billing with GST ✅ (Latest)
+
+**Billing Interface:**
+- **Two separate tabs**: Out-Patient (OP) and In-Patient (IP)
+- Type filter dropdown to view OP/IP bills separately
+- Each bill shows type badge (OP/IP) with color coding
+
+**Out-Patient (OP) Invoice:**
+- Consultation Fees
+- Treatment Charges
+- Other Charges
+- Medicine Charges (from inventory)
+- Discount
+- GST (18%) toggle
+- OP Bill Summary
+
+**In-Patient (IP) Invoice:**
+- Admission Date & Discharge Date
+- Consultation Charges
+- Room Charges
+- Treatment Charges
+- **Mess/Food Charges**
+- Other Charges
+- Medicine Charges (from inventory)
+- Discount
+- GST (18%) toggle
+- IP Bill Summary
 
 **Printable A4 Invoice:**
-- Hospital logo and branding
+- Hospital logo (TA) with color based on bill type
 - Full address and contact details
 - GSTIN number
-- Invoice number and date
-- Patient details (Name, Phone, Address, Type)
-- Itemized table (S.No, Description, Qty, Rate, Amount)
-- All charges breakdown
+- Invoice type label (IN-PATIENT / OUT-PATIENT)
+- Patient details with room number (for IP)
+- Admission/Discharge dates (for IP)
+- Itemized charges table with section headers
 - Subtotal, Discount, GST, Grand Total
-- Amount in words (Indian numbering system)
+- Amount in words (Indian numbering)
 - Payment status and balance due
-- Terms & Conditions
+- Terms & Conditions (with IP-specific terms)
 - Authorized Signatory section
-- Print button for A4 paper
+- Print button
 
 ## Test Credentials
 | Role | Email | Password |
@@ -88,9 +105,9 @@ Build a comprehensive Ayurvedic hospital management program with:
 
 ## Key Files
 - `/app/backend/server.py` - All backend APIs
-- `/app/frontend/src/pages/Billing.js` - Enhanced billing with GST & invoices
-- `/app/frontend/src/pages/Inventory.js` - Inventory with edit & import
-- `/app/frontend/src/pages/Patients.js` - Patients with import
+- `/app/frontend/src/pages/Billing.js` - IP/OP billing with GST & invoices
+- `/app/frontend/src/pages/Inventory.js` - Inventory management
+- `/app/frontend/src/pages/Patients.js` - Patient management
 
 ## MOCKED Features
 ⚠️ **Password Reset Email**: Reset tokens are logged to server console.
