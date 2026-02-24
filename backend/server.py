@@ -142,11 +142,13 @@ class AppointmentResponse(BaseModel):
 
 class BillCreate(BaseModel):
     patient_id: str
+    bill_type: str = "OP"  # OP or IP
     items: List[dict]  # [{name, quantity, sale_price, purchase_price}]
     treatment_charges: float = 0
     room_charges: float = 0
     consultation_charges: float = 0
     therapy_charges: float = 0
+    mess_charges: float = 0  # For IP patients (food charges)
     other_charges: float = 0
     discount: float = 0
     gst_rate: float = 0
@@ -154,16 +156,20 @@ class BillCreate(BaseModel):
     subtotal: float = 0
     total_amount: float = 0
     notes: Optional[str] = ""
+    admission_date: Optional[str] = None
+    discharge_date: Optional[str] = None
 
 class BillResponse(BaseModel):
     id: str
     patient_id: str
     patient_name: str
+    bill_type: str = "OP"
     items: List[dict]  # [{name, quantity, sale_price, purchase_price, profit}]
     treatment_charges: float
     room_charges: float
     consultation_charges: float = 0
     therapy_charges: float = 0
+    mess_charges: float = 0
     other_charges: float = 0
     discount: float = 0
     subtotal: float = 0
@@ -176,6 +182,8 @@ class BillResponse(BaseModel):
     status: str  # pending, partial, paid
     payment_method: Optional[str] = None
     notes: str
+    admission_date: Optional[str] = None
+    discharge_date: Optional[str] = None
     created_at: str
 
 class PaymentRequest(BaseModel):
