@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Plus, Receipt, IndianRupee, Check, Clock, AlertCircle, Trash2, Printer, Eye, X } from 'lucide-react';
+import { Plus, Receipt, IndianRupee, Check, Clock, AlertCircle, Trash2, Printer, X, Bed, User } from 'lucide-react';
 
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -20,10 +21,10 @@ const HOSPITAL_INFO = {
   city: 'Kozhikode, Kerala - 673001',
   phone: '+91 9895112264',
   email: 'info@tatvaayurved.com',
-  gstin: 'GSTIN: 32XXXXX1234X1ZX' // Add your actual GSTIN
+  gstin: 'GSTIN: 32XXXXX1234X1ZX'
 };
 
-// GST Rate (18% is common for healthcare services in India)
+// GST Rate
 const GST_RATE = 18;
 
 export default function Billing() {
@@ -33,32 +34,50 @@ export default function Billing() {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterType, setFilterType] = useState('all');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [selectedBill, setSelectedBill] = useState(null);
+  const [billType, setBillType] = useState('OP'); // OP or IP
   const printRef = useRef();
 
-  const [newBill, setNewBill] = useState({
+  // IP Bill State
+  const [ipBill, setIpBill] = useState({
     patient_id: '',
-    items: [],
-    treatment_charges: '',
-    room_charges: '',
+    items: [], // medicines
     consultation_charges: '',
-    therapy_charges: '',
+    room_charges: '',
+    treatment_charges: '',
+    mess_charges: '',
+    other_charges: '',
+    discount: '',
+    notes: '',
+    include_gst: true,
+    admission_date: '',
+    discharge_date: '',
+    num_days: ''
+  });
+
+  // OP Bill State
+  const [opBill, setOpBill] = useState({
+    patient_id: '',
+    items: [], // medicines
+    consultation_charges: '',
+    treatment_charges: '',
     other_charges: '',
     discount: '',
     notes: '',
     include_gst: true
   });
 
-  const [newItem, setNewItem] = useState({ name: '', quantity: 1, price: '', purchase_price: '' });
+  const [newItem, setNewItem] = useState({ name: '', quantity: 1, sale_price: '', purchase_price: '' });
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
 
   useEffect(() => {
     fetchData();
-  }, [filterStatus]);
+  }, [filterStatus, filterType]);
 
   const fetchData = async () => {
     try {
@@ -67,7 +86,11 @@ export default function Billing() {
         axios.get(`${API_URL}/patients`, { headers: getAuthHeaders() }),
         axios.get(`${API_URL}/inventory`, { headers: getAuthHeaders() })
       ]);
-      setBills(billsRes.data);
+      let filteredBills = billsRes.data;
+      if (filterType !== 'all') {
+        filteredBills = filteredBills.filter(b => b.bill_type === filterType);
+      }
+      setBills(filteredBills);
       setPatients(patientsRes.data);
       setInventory(inventoryRes.data);
     } catch (error) {
@@ -77,13 +100,22 @@ export default function Billing() {
     }
   };
 
+  const getCurrentBill = () => billType === 'IP' ? ipBill : opBill;
+  const setCurrentBill = (updates) => {
+    if (billType === 'IP') {
+      setIpBill(prev => ({ ...prev, ...updates }));
+    } else {
+      setOpBill(prev => ({ ...prev, ...updates }));
+    }
+  };
+
   const addItemToBill = () => {
     if (!newItem.name || !newItem.sale_price) return;
-    setNewBill({
-      ...newBill,
-      items: [...newBill.items, { 
-        ...newItem, 
-        quantity: parseInt(newItem.quantity), 
+    const currentBill = getCurrentBill();
+    setCurrentBill({
+      items: [...currentBill.items, {
+        ...newItem,
+        quantity: parseInt(newItem.quantity),
         sale_price: parseFloat(newItem.sale_price),
         purchase_price: parseFloat(newItem.purchase_price || 0)
       }]
@@ -92,9 +124,9 @@ export default function Billing() {
   };
 
   const removeItemFromBill = (index) => {
-    setNewBill({
-      ...newBill,
-      items: newBill.items.filter((_, i) => i !== index)
+    const currentBill = getCurrentBill();
+    setCurrentBill({
+      items: currentBill.items.filter((_, i) => i !== index)
     });
   };
 
@@ -103,74 +135,98 @@ export default function Billing() {
     if (item) {
       const purchasePrice = item.purchase_price || item.price || 0;
       const salePrice = item.sale_price || (purchasePrice * 1.2);
-      setNewItem({ 
-        name: item.name, 
-        quantity: 1, 
+      setNewItem({
+        name: item.name,
+        quantity: 1,
         sale_price: salePrice.toString(),
         purchase_price: purchasePrice.toString()
       });
     }
   };
 
-  // Calculate bill totals
-  const calculateBillTotals = (bill = newBill) => {
-    const itemsTotal = bill.items.reduce((sum, i) => sum + (i.quantity * (i.sale_price || i.price || 0)), 0);
-    const treatmentCharges = parseFloat(bill.treatment_charges) || 0;
-    const roomCharges = parseFloat(bill.room_charges) || 0;
+  // Calculate bill totals for IP
+  const calculateIPTotals = () => {
+    const bill = ipBill;
+    const itemsTotal = bill.items.reduce((sum, i) => sum + (i.quantity * (i.sale_price || 0)), 0);
     const consultationCharges = parseFloat(bill.consultation_charges) || 0;
-    const therapyCharges = parseFloat(bill.therapy_charges) || 0;
+    const roomCharges = parseFloat(bill.room_charges) || 0;
+    const treatmentCharges = parseFloat(bill.treatment_charges) || 0;
+    const messCharges = parseFloat(bill.mess_charges) || 0;
     const otherCharges = parseFloat(bill.other_charges) || 0;
     const discount = parseFloat(bill.discount) || 0;
 
-    const subtotal = itemsTotal + treatmentCharges + roomCharges + consultationCharges + therapyCharges + otherCharges;
+    const subtotal = itemsTotal + consultationCharges + roomCharges + treatmentCharges + messCharges + otherCharges;
     const discountedTotal = subtotal - discount;
     const gstAmount = bill.include_gst ? (discountedTotal * GST_RATE / 100) : 0;
     const grandTotal = discountedTotal + gstAmount;
 
-    const itemsProfit = bill.items.reduce((total, item) => {
-      const profit = ((item.sale_price || item.price || 0) - (item.purchase_price || 0)) * item.quantity;
-      return total + profit;
-    }, 0);
+    return { itemsTotal, consultationCharges, roomCharges, treatmentCharges, messCharges, otherCharges, subtotal, discount, discountedTotal, gstAmount, grandTotal };
+  };
 
-    return {
-      itemsTotal,
-      treatmentCharges,
-      roomCharges,
-      consultationCharges,
-      therapyCharges,
-      otherCharges,
-      subtotal,
-      discount,
-      discountedTotal,
-      gstAmount,
-      grandTotal,
-      itemsProfit
-    };
+  // Calculate bill totals for OP
+  const calculateOPTotals = () => {
+    const bill = opBill;
+    const itemsTotal = bill.items.reduce((sum, i) => sum + (i.quantity * (i.sale_price || 0)), 0);
+    const consultationCharges = parseFloat(bill.consultation_charges) || 0;
+    const treatmentCharges = parseFloat(bill.treatment_charges) || 0;
+    const otherCharges = parseFloat(bill.other_charges) || 0;
+    const discount = parseFloat(bill.discount) || 0;
+
+    const subtotal = itemsTotal + consultationCharges + treatmentCharges + otherCharges;
+    const discountedTotal = subtotal - discount;
+    const gstAmount = bill.include_gst ? (discountedTotal * GST_RATE / 100) : 0;
+    const grandTotal = discountedTotal + gstAmount;
+
+    return { itemsTotal, consultationCharges, treatmentCharges, otherCharges, subtotal, discount, discountedTotal, gstAmount, grandTotal };
   };
 
   const handleCreateBill = async (e) => {
     e.preventDefault();
-    const totals = calculateBillTotals();
+    const currentBill = getCurrentBill();
+    const totals = billType === 'IP' ? calculateIPTotals() : calculateOPTotals();
+
+    // Prepare items with profit calculation
+    const itemsWithProfit = currentBill.items.map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      sale_price: item.sale_price,
+      purchase_price: item.purchase_price || 0,
+      item_total: item.quantity * item.sale_price,
+      profit: (item.sale_price - (item.purchase_price || 0)) * item.quantity
+    }));
+
+    const billData = {
+      patient_id: currentBill.patient_id,
+      bill_type: billType,
+      items: itemsWithProfit,
+      consultation_charges: parseFloat(currentBill.consultation_charges) || 0,
+      treatment_charges: parseFloat(currentBill.treatment_charges) || 0,
+      room_charges: billType === 'IP' ? (parseFloat(currentBill.room_charges) || 0) : 0,
+      mess_charges: billType === 'IP' ? (parseFloat(currentBill.mess_charges) || 0) : 0,
+      other_charges: parseFloat(currentBill.other_charges) || 0,
+      discount: parseFloat(currentBill.discount) || 0,
+      gst_rate: currentBill.include_gst ? GST_RATE : 0,
+      gst_amount: totals.gstAmount,
+      subtotal: totals.subtotal,
+      total_amount: totals.grandTotal,
+      notes: currentBill.notes || '',
+      admission_date: billType === 'IP' ? currentBill.admission_date : null,
+      discharge_date: billType === 'IP' ? currentBill.discharge_date : null
+    };
+
     try {
-      await axios.post(`${API_URL}/bills`, {
-        ...newBill,
-        treatment_charges: parseFloat(newBill.treatment_charges || 0),
-        room_charges: parseFloat(newBill.room_charges || 0),
-        consultation_charges: parseFloat(newBill.consultation_charges || 0),
-        therapy_charges: parseFloat(newBill.therapy_charges || 0),
-        other_charges: parseFloat(newBill.other_charges || 0),
-        discount: parseFloat(newBill.discount || 0),
-        gst_rate: newBill.include_gst ? GST_RATE : 0,
-        gst_amount: totals.gstAmount,
-        subtotal: totals.subtotal,
-        total_amount: totals.grandTotal
-      }, { headers: getAuthHeaders() });
-      toast.success('Bill created successfully');
+      await axios.post(`${API_URL}/bills`, billData, { headers: getAuthHeaders() });
+      toast.success(`${billType} Bill created successfully`);
       setAddDialogOpen(false);
-      setNewBill({ 
-        patient_id: '', items: [], treatment_charges: '', room_charges: '', 
-        consultation_charges: '', therapy_charges: '', other_charges: '',
-        discount: '', notes: '', include_gst: true 
+      // Reset forms
+      setIpBill({
+        patient_id: '', items: [], consultation_charges: '', room_charges: '',
+        treatment_charges: '', mess_charges: '', other_charges: '', discount: '',
+        notes: '', include_gst: true, admission_date: '', discharge_date: '', num_days: ''
+      });
+      setOpBill({
+        patient_id: '', items: [], consultation_charges: '', treatment_charges: '',
+        other_charges: '', discount: '', notes: '', include_gst: true
       });
       fetchData();
     } catch (error) {
@@ -222,48 +278,18 @@ export default function Billing() {
   };
 
   const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
     return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
+      day: '2-digit', month: 'short', year: 'numeric'
     });
   };
 
-  const numberToWords = (num) => {
-    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
-    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-
-    if (num === 0) return 'Zero';
-    if (num < 0) return 'Minus ' + numberToWords(Math.abs(num));
-
-    let words = '';
-    
-    if (Math.floor(num / 10000000) > 0) {
-      words += numberToWords(Math.floor(num / 10000000)) + ' Crore ';
-      num %= 10000000;
+  // Get patients filtered by type
+  const getFilteredPatients = () => {
+    if (billType === 'IP') {
+      return patients.filter(p => p.patient_type === 'IP' || p.status === 'admitted');
     }
-    if (Math.floor(num / 100000) > 0) {
-      words += numberToWords(Math.floor(num / 100000)) + ' Lakh ';
-      num %= 100000;
-    }
-    if (Math.floor(num / 1000) > 0) {
-      words += numberToWords(Math.floor(num / 1000)) + ' Thousand ';
-      num %= 1000;
-    }
-    if (Math.floor(num / 100) > 0) {
-      words += ones[Math.floor(num / 100)] + ' Hundred ';
-      num %= 100;
-    }
-    if (num > 0) {
-      if (num < 10) words += ones[num];
-      else if (num < 20) words += teens[num - 10];
-      else {
-        words += tens[Math.floor(num / 10)];
-        if (num % 10 > 0) words += ' ' + ones[num % 10];
-      }
-    }
-    return words.trim();
+    return patients; // OP can bill any patient
   };
 
   if (loading) {
@@ -274,208 +300,328 @@ export default function Billing() {
     );
   }
 
-  const totals = calculateBillTotals();
+  const ipTotals = calculateIPTotals();
+  const opTotals = calculateOPTotals();
 
   return (
     <div className="animate-fade-in" data-testid="billing-page">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
-          <h1 className="page-title">Billing</h1>
-          <p className="page-subtitle">Manage patient bills, GST invoices and payments</p>
+          <h1 className="page-title">Billing & Invoices</h1>
+          <p className="page-subtitle">Create and manage IP/OP patient bills with GST invoices</p>
         </div>
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-[#3A5A40] hover:bg-[#344E41] rounded-full px-6" data-testid="create-bill-btn">
               <Plus className="w-5 h-5 mr-2" />
-              Create Bill
+              Create Invoice
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle style={{ fontFamily: 'Playfair Display' }}>Create New Bill</DialogTitle>
+              <DialogTitle style={{ fontFamily: 'Playfair Display' }}>Create New Invoice</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleCreateBill} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Patient</Label>
-                <Select
-                  value={newBill.patient_id}
-                  onValueChange={(v) => setNewBill({ ...newBill, patient_id: v })}
-                >
-                  <SelectTrigger className="rounded-xl" data-testid="bill-patient-select">
-                    <SelectValue placeholder="Select patient" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {patients.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name} - {p.phone} ({p.patient_type || 'N/A'})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
-              {/* Add Items */}
-              <div className="space-y-2">
-                <Label>Add Items (Medicines/Services)</Label>
-                <div className="flex gap-2">
-                  <Select onValueChange={selectInventoryItem}>
-                    <SelectTrigger className="rounded-xl flex-1">
-                      <SelectValue placeholder="Select from inventory" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {inventory.map((item) => {
-                        const salePrice = item.sale_price || item.price || 0;
-                        return (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.name} - ₹{salePrice.toFixed(2)}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 gap-2 mt-2">
-                  <Input
-                    placeholder="Item name"
-                    value={newItem.name}
-                    onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                    className="rounded-xl col-span-2"
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Qty"
-                    value={newItem.quantity}
-                    onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
-                    className="rounded-xl"
-                  />
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      placeholder="Price"
-                      value={newItem.sale_price}
-                      onChange={(e) => setNewItem({ ...newItem, sale_price: e.target.value })}
-                      className="rounded-xl"
-                    />
-                    <Button type="button" variant="outline" onClick={addItemToBill} className="rounded-xl">
-                      <Plus className="w-4 h-4" />
-                    </Button>
+            {/* IP/OP Tabs */}
+            <Tabs value={billType} onValueChange={setBillType} className="mt-4">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="OP" className="flex items-center gap-2" data-testid="op-tab">
+                  <User className="w-4 h-4" />
+                  Out-Patient (OP)
+                </TabsTrigger>
+                <TabsTrigger value="IP" className="flex items-center gap-2" data-testid="ip-tab">
+                  <Bed className="w-4 h-4" />
+                  In-Patient (IP)
+                </TabsTrigger>
+              </TabsList>
+
+              {/* OP Bill Form */}
+              <TabsContent value="OP">
+                <form onSubmit={handleCreateBill} className="space-y-4">
+                  <div className="p-3 bg-[#588157]/10 rounded-xl mb-4">
+                    <p className="text-sm font-medium text-[#3A5A40]">Out-Patient Invoice</p>
+                    <p className="text-xs text-[#6B7280]">For patients visiting for consultation and treatment</p>
                   </div>
-                </div>
-              </div>
 
-              {/* Items List */}
-              {newBill.items.length > 0 && (
-                <div className="border border-[#E2E8F0] rounded-xl p-4 space-y-2">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-1">Item</th>
-                        <th className="text-center py-1">Qty</th>
-                        <th className="text-right py-1">Rate</th>
-                        <th className="text-right py-1">Amount</th>
-                        <th className="w-8"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {newBill.items.map((item, index) => (
-                        <tr key={index} className="border-b border-dashed">
-                          <td className="py-1">{item.name}</td>
-                          <td className="text-center">{item.quantity}</td>
-                          <td className="text-right">₹{(item.sale_price || 0).toFixed(2)}</td>
-                          <td className="text-right">₹{(item.quantity * (item.sale_price || 0)).toFixed(2)}</td>
-                          <td>
-                            <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-[#BC4749]" onClick={() => removeItemFromBill(index)}>
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </td>
-                        </tr>
+                  {/* Patient Selection */}
+                  <div className="space-y-2">
+                    <Label>Select Patient</Label>
+                    <Select value={opBill.patient_id} onValueChange={(v) => setOpBill({ ...opBill, patient_id: v })}>
+                      <SelectTrigger className="rounded-xl" data-testid="op-patient-select">
+                        <SelectValue placeholder="Select patient" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {patients.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name} - {p.phone}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* OP Charges */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Consultation Fees (₹)</Label>
+                      <Input type="number" value={opBill.consultation_charges} onChange={(e) => setOpBill({ ...opBill, consultation_charges: e.target.value })} className="rounded-xl" placeholder="0" data-testid="op-consultation" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Treatment Charges (₹)</Label>
+                      <Input type="number" value={opBill.treatment_charges} onChange={(e) => setOpBill({ ...opBill, treatment_charges: e.target.value })} className="rounded-xl" placeholder="0" data-testid="op-treatment" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Other Charges (₹)</Label>
+                      <Input type="number" value={opBill.other_charges} onChange={(e) => setOpBill({ ...opBill, other_charges: e.target.value })} className="rounded-xl" placeholder="0" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Discount (₹)</Label>
+                      <Input type="number" value={opBill.discount} onChange={(e) => setOpBill({ ...opBill, discount: e.target.value })} className="rounded-xl" placeholder="0" />
+                    </div>
+                  </div>
+
+                  {/* Medicine Items */}
+                  <div className="space-y-2">
+                    <Label>Medicine Charges</Label>
+                    <div className="flex gap-2">
+                      <Select onValueChange={selectInventoryItem}>
+                        <SelectTrigger className="rounded-xl flex-1">
+                          <SelectValue placeholder="Select medicine from inventory" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {inventory.filter(i => i.category === 'medicines' || i.category === 'herbs').map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.name} - ₹{(item.sale_price || item.price || 0).toFixed(2)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 mt-2">
+                      <Input placeholder="Medicine name" value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} className="rounded-xl col-span-2" />
+                      <Input type="number" placeholder="Qty" value={newItem.quantity} onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })} className="rounded-xl" />
+                      <div className="flex gap-2">
+                        <Input type="number" placeholder="Price" value={newItem.sale_price} onChange={(e) => setNewItem({ ...newItem, sale_price: e.target.value })} className="rounded-xl" />
+                        <Button type="button" variant="outline" onClick={addItemToBill} className="rounded-xl"><Plus className="w-4 h-4" /></Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Items List */}
+                  {opBill.items.length > 0 && (
+                    <div className="border border-[#E2E8F0] rounded-xl p-3">
+                      <p className="text-xs font-medium text-[#6B7280] mb-2">MEDICINES</p>
+                      {opBill.items.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between text-sm py-1 border-b border-dashed last:border-0">
+                          <span>{item.name} x {item.quantity}</span>
+                          <div className="flex items-center gap-2">
+                            <span>₹{(item.quantity * item.sale_price).toFixed(2)}</span>
+                            <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-[#BC4749]" onClick={() => removeItemFromBill(index)}><Trash2 className="w-3 h-3" /></Button>
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                    </div>
+                  )}
 
-              {/* Charges */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Consultation (₹)</Label>
-                  <Input type="number" value={newBill.consultation_charges} onChange={(e) => setNewBill({ ...newBill, consultation_charges: e.target.value })} className="rounded-xl" placeholder="0" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Treatment (₹)</Label>
-                  <Input type="number" value={newBill.treatment_charges} onChange={(e) => setNewBill({ ...newBill, treatment_charges: e.target.value })} className="rounded-xl" placeholder="0" data-testid="treatment-charges-input" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Therapy (₹)</Label>
-                  <Input type="number" value={newBill.therapy_charges} onChange={(e) => setNewBill({ ...newBill, therapy_charges: e.target.value })} className="rounded-xl" placeholder="0" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Room Charges (₹)</Label>
-                  <Input type="number" value={newBill.room_charges} onChange={(e) => setNewBill({ ...newBill, room_charges: e.target.value })} className="rounded-xl" placeholder="0" data-testid="room-charges-input" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Other Charges (₹)</Label>
-                  <Input type="number" value={newBill.other_charges} onChange={(e) => setNewBill({ ...newBill, other_charges: e.target.value })} className="rounded-xl" placeholder="0" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Discount (₹)</Label>
-                  <Input type="number" value={newBill.discount} onChange={(e) => setNewBill({ ...newBill, discount: e.target.value })} className="rounded-xl" placeholder="0" />
-                </div>
-              </div>
-
-              {/* GST Toggle */}
-              <div className="flex items-center gap-3 p-3 bg-[#DAD7CD]/20 rounded-xl">
-                <input
-                  type="checkbox"
-                  id="include_gst"
-                  checked={newBill.include_gst}
-                  onChange={(e) => setNewBill({ ...newBill, include_gst: e.target.checked })}
-                  className="w-4 h-4 accent-[#3A5A40]"
-                />
-                <Label htmlFor="include_gst" className="cursor-pointer">Include GST ({GST_RATE}%)</Label>
-              </div>
-
-              {/* Bill Summary */}
-              <div className="border border-[#3A5A40] rounded-xl p-4 bg-[#3A5A40]/5">
-                <h4 className="font-semibold mb-3">Bill Summary</h4>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between"><span>Items Total:</span><span>₹{totals.itemsTotal.toFixed(2)}</span></div>
-                  {totals.consultationCharges > 0 && <div className="flex justify-between"><span>Consultation:</span><span>₹{totals.consultationCharges.toFixed(2)}</span></div>}
-                  {totals.treatmentCharges > 0 && <div className="flex justify-between"><span>Treatment:</span><span>₹{totals.treatmentCharges.toFixed(2)}</span></div>}
-                  {totals.therapyCharges > 0 && <div className="flex justify-between"><span>Therapy:</span><span>₹{totals.therapyCharges.toFixed(2)}</span></div>}
-                  {totals.roomCharges > 0 && <div className="flex justify-between"><span>Room:</span><span>₹{totals.roomCharges.toFixed(2)}</span></div>}
-                  {totals.otherCharges > 0 && <div className="flex justify-between"><span>Other:</span><span>₹{totals.otherCharges.toFixed(2)}</span></div>}
-                  <div className="flex justify-between border-t pt-1"><span>Subtotal:</span><span>₹{totals.subtotal.toFixed(2)}</span></div>
-                  {totals.discount > 0 && <div className="flex justify-between text-[#BC4749]"><span>Discount:</span><span>-₹{totals.discount.toFixed(2)}</span></div>}
-                  {newBill.include_gst && <div className="flex justify-between"><span>GST ({GST_RATE}%):</span><span>₹{totals.gstAmount.toFixed(2)}</span></div>}
-                  <div className="flex justify-between font-bold text-lg border-t pt-2 text-[#3A5A40]">
-                    <span>Grand Total:</span><span>₹{totals.grandTotal.toFixed(2)}</span>
+                  {/* GST Toggle */}
+                  <div className="flex items-center gap-3 p-3 bg-[#DAD7CD]/20 rounded-xl">
+                    <input type="checkbox" id="op_gst" checked={opBill.include_gst} onChange={(e) => setOpBill({ ...opBill, include_gst: e.target.checked })} className="w-4 h-4 accent-[#3A5A40]" />
+                    <Label htmlFor="op_gst" className="cursor-pointer">Include GST ({GST_RATE}%)</Label>
                   </div>
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label>Notes</Label>
-                <Textarea value={newBill.notes} onChange={(e) => setNewBill({ ...newBill, notes: e.target.value })} className="rounded-xl" placeholder="Any additional notes" />
-              </div>
+                  {/* Bill Summary */}
+                  <div className="border border-[#3A5A40] rounded-xl p-4 bg-[#3A5A40]/5">
+                    <h4 className="font-semibold mb-3">OP Bill Summary</h4>
+                    <div className="space-y-1 text-sm">
+                      {opTotals.consultationCharges > 0 && <div className="flex justify-between"><span>Consultation:</span><span>₹{opTotals.consultationCharges.toFixed(2)}</span></div>}
+                      {opTotals.treatmentCharges > 0 && <div className="flex justify-between"><span>Treatment:</span><span>₹{opTotals.treatmentCharges.toFixed(2)}</span></div>}
+                      {opTotals.itemsTotal > 0 && <div className="flex justify-between"><span>Medicines:</span><span>₹{opTotals.itemsTotal.toFixed(2)}</span></div>}
+                      {opTotals.otherCharges > 0 && <div className="flex justify-between"><span>Other:</span><span>₹{opTotals.otherCharges.toFixed(2)}</span></div>}
+                      <div className="flex justify-between border-t pt-1"><span>Subtotal:</span><span>₹{opTotals.subtotal.toFixed(2)}</span></div>
+                      {opTotals.discount > 0 && <div className="flex justify-between text-[#BC4749]"><span>Discount:</span><span>-₹{opTotals.discount.toFixed(2)}</span></div>}
+                      {opBill.include_gst && <div className="flex justify-between"><span>GST ({GST_RATE}%):</span><span>₹{opTotals.gstAmount.toFixed(2)}</span></div>}
+                      <div className="flex justify-between font-bold text-lg border-t pt-2 text-[#3A5A40]">
+                        <span>Grand Total:</span><span>₹{opTotals.grandTotal.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
 
-              <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="submit-bill-btn">
-                Create Bill
-              </Button>
-            </form>
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea value={opBill.notes} onChange={(e) => setOpBill({ ...opBill, notes: e.target.value })} className="rounded-xl" placeholder="Any additional notes" />
+                  </div>
+
+                  <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="submit-op-bill">
+                    Create OP Invoice
+                  </Button>
+                </form>
+              </TabsContent>
+
+              {/* IP Bill Form */}
+              <TabsContent value="IP">
+                <form onSubmit={handleCreateBill} className="space-y-4">
+                  <div className="p-3 bg-[#D4A373]/10 rounded-xl mb-4">
+                    <p className="text-sm font-medium text-[#D4A373]">In-Patient Invoice</p>
+                    <p className="text-xs text-[#6B7280]">For admitted patients with room, treatment, and mess charges</p>
+                  </div>
+
+                  {/* Patient Selection */}
+                  <div className="space-y-2">
+                    <Label>Select Admitted Patient</Label>
+                    <Select value={ipBill.patient_id} onValueChange={(v) => setIpBill({ ...ipBill, patient_id: v })}>
+                      <SelectTrigger className="rounded-xl" data-testid="ip-patient-select">
+                        <SelectValue placeholder="Select patient" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getFilteredPatients().map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name} - {p.phone} {p.room_number ? `(Room ${p.room_number})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Admission Dates */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Admission Date</Label>
+                      <Input type="date" value={ipBill.admission_date} onChange={(e) => setIpBill({ ...ipBill, admission_date: e.target.value })} className="rounded-xl" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Discharge Date</Label>
+                      <Input type="date" value={ipBill.discharge_date} onChange={(e) => setIpBill({ ...ipBill, discharge_date: e.target.value })} className="rounded-xl" />
+                    </div>
+                  </div>
+
+                  {/* IP Charges */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Consultation Charges (₹)</Label>
+                      <Input type="number" value={ipBill.consultation_charges} onChange={(e) => setIpBill({ ...ipBill, consultation_charges: e.target.value })} className="rounded-xl" placeholder="0" data-testid="ip-consultation" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Room Charges (₹)</Label>
+                      <Input type="number" value={ipBill.room_charges} onChange={(e) => setIpBill({ ...ipBill, room_charges: e.target.value })} className="rounded-xl" placeholder="0" data-testid="ip-room" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Treatment Charges (₹)</Label>
+                      <Input type="number" value={ipBill.treatment_charges} onChange={(e) => setIpBill({ ...ipBill, treatment_charges: e.target.value })} className="rounded-xl" placeholder="0" data-testid="ip-treatment" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Mess/Food Charges (₹)</Label>
+                      <Input type="number" value={ipBill.mess_charges} onChange={(e) => setIpBill({ ...ipBill, mess_charges: e.target.value })} className="rounded-xl" placeholder="0" data-testid="ip-mess" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Other Charges (₹)</Label>
+                      <Input type="number" value={ipBill.other_charges} onChange={(e) => setIpBill({ ...ipBill, other_charges: e.target.value })} className="rounded-xl" placeholder="0" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Discount (₹)</Label>
+                      <Input type="number" value={ipBill.discount} onChange={(e) => setIpBill({ ...ipBill, discount: e.target.value })} className="rounded-xl" placeholder="0" />
+                    </div>
+                  </div>
+
+                  {/* Medicine Items */}
+                  <div className="space-y-2">
+                    <Label>Medicine Charges</Label>
+                    <div className="flex gap-2">
+                      <Select onValueChange={selectInventoryItem}>
+                        <SelectTrigger className="rounded-xl flex-1">
+                          <SelectValue placeholder="Select medicine from inventory" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {inventory.filter(i => i.category === 'medicines' || i.category === 'herbs').map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.name} - ₹{(item.sale_price || item.price || 0).toFixed(2)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 mt-2">
+                      <Input placeholder="Medicine name" value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} className="rounded-xl col-span-2" />
+                      <Input type="number" placeholder="Qty" value={newItem.quantity} onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })} className="rounded-xl" />
+                      <div className="flex gap-2">
+                        <Input type="number" placeholder="Price" value={newItem.sale_price} onChange={(e) => setNewItem({ ...newItem, sale_price: e.target.value })} className="rounded-xl" />
+                        <Button type="button" variant="outline" onClick={addItemToBill} className="rounded-xl"><Plus className="w-4 h-4" /></Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Items List */}
+                  {ipBill.items.length > 0 && (
+                    <div className="border border-[#E2E8F0] rounded-xl p-3">
+                      <p className="text-xs font-medium text-[#6B7280] mb-2">MEDICINES</p>
+                      {ipBill.items.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between text-sm py-1 border-b border-dashed last:border-0">
+                          <span>{item.name} x {item.quantity}</span>
+                          <div className="flex items-center gap-2">
+                            <span>₹{(item.quantity * item.sale_price).toFixed(2)}</span>
+                            <Button type="button" size="icon" variant="ghost" className="h-6 w-6 text-[#BC4749]" onClick={() => removeItemFromBill(index)}><Trash2 className="w-3 h-3" /></Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* GST Toggle */}
+                  <div className="flex items-center gap-3 p-3 bg-[#DAD7CD]/20 rounded-xl">
+                    <input type="checkbox" id="ip_gst" checked={ipBill.include_gst} onChange={(e) => setIpBill({ ...ipBill, include_gst: e.target.checked })} className="w-4 h-4 accent-[#3A5A40]" />
+                    <Label htmlFor="ip_gst" className="cursor-pointer">Include GST ({GST_RATE}%)</Label>
+                  </div>
+
+                  {/* Bill Summary */}
+                  <div className="border border-[#D4A373] rounded-xl p-4 bg-[#D4A373]/5">
+                    <h4 className="font-semibold mb-3">IP Bill Summary</h4>
+                    <div className="space-y-1 text-sm">
+                      {ipTotals.consultationCharges > 0 && <div className="flex justify-between"><span>Consultation:</span><span>₹{ipTotals.consultationCharges.toFixed(2)}</span></div>}
+                      {ipTotals.roomCharges > 0 && <div className="flex justify-between"><span>Room Charges:</span><span>₹{ipTotals.roomCharges.toFixed(2)}</span></div>}
+                      {ipTotals.treatmentCharges > 0 && <div className="flex justify-between"><span>Treatment:</span><span>₹{ipTotals.treatmentCharges.toFixed(2)}</span></div>}
+                      {ipTotals.messCharges > 0 && <div className="flex justify-between"><span>Mess/Food:</span><span>₹{ipTotals.messCharges.toFixed(2)}</span></div>}
+                      {ipTotals.itemsTotal > 0 && <div className="flex justify-between"><span>Medicines:</span><span>₹{ipTotals.itemsTotal.toFixed(2)}</span></div>}
+                      {ipTotals.otherCharges > 0 && <div className="flex justify-between"><span>Other:</span><span>₹{ipTotals.otherCharges.toFixed(2)}</span></div>}
+                      <div className="flex justify-between border-t pt-1"><span>Subtotal:</span><span>₹{ipTotals.subtotal.toFixed(2)}</span></div>
+                      {ipTotals.discount > 0 && <div className="flex justify-between text-[#BC4749]"><span>Discount:</span><span>-₹{ipTotals.discount.toFixed(2)}</span></div>}
+                      {ipBill.include_gst && <div className="flex justify-between"><span>GST ({GST_RATE}%):</span><span>₹{ipTotals.gstAmount.toFixed(2)}</span></div>}
+                      <div className="flex justify-between font-bold text-lg border-t pt-2 text-[#D4A373]">
+                        <span>Grand Total:</span><span>₹{ipTotals.grandTotal.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea value={ipBill.notes} onChange={(e) => setIpBill({ ...ipBill, notes: e.target.value })} className="rounded-xl" placeholder="Any additional notes" />
+                  </div>
+
+                  <Button type="submit" className="w-full bg-[#D4A373] hover:bg-[#D4A373]/90 rounded-full" data-testid="submit-ip-bill">
+                    Create IP Invoice
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Filter */}
-      <div className="mb-6">
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-48 rounded-xl" data-testid="filter-status">
-            <SelectValue placeholder="Filter by status" />
+      {/* Filters */}
+      <div className="flex gap-4 mb-6">
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="w-40 rounded-xl" data-testid="filter-type">
+            <SelectValue placeholder="Bill Type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Bills</SelectItem>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="OP">Out-Patient</SelectItem>
+            <SelectItem value="IP">In-Patient</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-40 rounded-xl" data-testid="filter-status">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="partial">Partial</SelectItem>
             <SelectItem value="paid">Paid</SelectItem>
@@ -492,11 +638,16 @@ export default function Billing() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-xl bg-[#3A5A40]/10 flex items-center justify-center">
-                        <Receipt className="w-5 h-5 text-[#3A5A40]" />
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${bill.bill_type === 'IP' ? 'bg-[#D4A373]/10' : 'bg-[#3A5A40]/10'}`}>
+                        {bill.bill_type === 'IP' ? <Bed className="w-5 h-5 text-[#D4A373]" /> : <User className="w-5 h-5 text-[#3A5A40]" />}
                       </div>
                       <div>
-                        <h3 className="font-medium text-[#1A1C18]">{bill.patient_name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-[#1A1C18]">{bill.patient_name}</h3>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${bill.bill_type === 'IP' ? 'bg-[#D4A373]/10 text-[#D4A373]' : 'bg-[#3A5A40]/10 text-[#3A5A40]'}`}>
+                            {bill.bill_type || 'OP'}
+                          </span>
+                        </div>
                         <p className="text-xs text-[#6B7280]">
                           {formatDate(bill.created_at)} | Invoice #{bill.id.slice(0, 8).toUpperCase()}
                         </p>
@@ -514,9 +665,7 @@ export default function Billing() {
                       </div>
                       <div>
                         <p className="text-xs text-[#6B7280] uppercase tracking-wide">Balance</p>
-                        <p className="font-semibold text-[#BC4749]">
-                          ₹{((bill.total_amount || 0) - (bill.paid_amount || 0)).toFixed(2)}
-                        </p>
+                        <p className="font-semibold text-[#BC4749]">₹{((bill.total_amount || 0) - (bill.paid_amount || 0)).toFixed(2)}</p>
                       </div>
                       <div>
                         <p className="text-xs text-[#6B7280] uppercase tracking-wide">GST</p>
@@ -533,27 +682,12 @@ export default function Billing() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full"
-                      onClick={() => openInvoice(bill)}
-                      data-testid={`view-invoice-btn-${bill.id}`}
-                    >
+                    <Button variant="outline" size="sm" className="rounded-full" onClick={() => openInvoice(bill)} data-testid={`view-invoice-btn-${bill.id}`}>
                       <Printer className="w-4 h-4 mr-1" />
                       Invoice
                     </Button>
                     {bill.status !== 'paid' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-full border-[#3A5A40] text-[#3A5A40] hover:bg-[#3A5A40]/10"
-                        onClick={() => {
-                          setSelectedBill(bill);
-                          setPaymentDialogOpen(true);
-                        }}
-                        data-testid={`pay-btn-${bill.id}`}
-                      >
+                      <Button variant="outline" size="sm" className="rounded-full border-[#3A5A40] text-[#3A5A40] hover:bg-[#3A5A40]/10" onClick={() => { setSelectedBill(bill); setPaymentDialogOpen(true); }} data-testid={`pay-btn-${bill.id}`}>
                         <IndianRupee className="w-4 h-4 mr-1" />
                         Pay
                       </Button>
@@ -580,7 +714,12 @@ export default function Billing() {
           {selectedBill && (
             <form onSubmit={handlePayment} className="space-y-4 mt-4">
               <div className="p-4 bg-[#DAD7CD]/20 rounded-xl">
-                <p className="font-medium">{selectedBill.patient_name}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-medium">{selectedBill.patient_name}</p>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${selectedBill.bill_type === 'IP' ? 'bg-[#D4A373]/10 text-[#D4A373]' : 'bg-[#3A5A40]/10 text-[#3A5A40]'}`}>
+                    {selectedBill.bill_type || 'OP'}
+                  </span>
+                </div>
                 <div className="flex justify-between text-sm mt-2">
                   <span>Total Amount:</span>
                   <span className="font-medium">₹{(selectedBill.total_amount || 0).toFixed(2)}</span>
@@ -591,23 +730,13 @@ export default function Billing() {
                 </div>
                 <div className="flex justify-between text-sm font-medium mt-2 pt-2 border-t border-[#DAD7CD]">
                   <span>Balance Due:</span>
-                  <span className="text-[#BC4749]">
-                    ₹{((selectedBill.total_amount || 0) - (selectedBill.paid_amount || 0)).toFixed(2)}
-                  </span>
+                  <span className="text-[#BC4749]">₹{((selectedBill.total_amount || 0) - (selectedBill.paid_amount || 0)).toFixed(2)}</span>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label>Payment Amount (₹)</Label>
-                <Input
-                  type="number"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  required
-                  className="rounded-xl"
-                  placeholder="Enter amount"
-                  data-testid="payment-amount-input"
-                />
+                <Input type="number" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} required className="rounded-xl" placeholder="Enter amount" data-testid="payment-amount-input" />
               </div>
 
               <div className="space-y-2">
@@ -637,7 +766,14 @@ export default function Billing() {
       <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-0">
           <div className="sticky top-0 bg-white z-10 p-4 border-b flex justify-between items-center">
-            <h2 className="font-semibold">Invoice Preview</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-semibold">Invoice Preview</h2>
+              {selectedBill && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${selectedBill.bill_type === 'IP' ? 'bg-[#D4A373]/10 text-[#D4A373]' : 'bg-[#3A5A40]/10 text-[#3A5A40]'}`}>
+                  {selectedBill.bill_type || 'OP'}
+                </span>
+              )}
+            </div>
             <div className="flex gap-2">
               <Button onClick={handlePrint} className="bg-[#3A5A40] hover:bg-[#344E41] rounded-full">
                 <Printer className="w-4 h-4 mr-2" />
@@ -648,8 +784,7 @@ export default function Billing() {
               </Button>
             </div>
           </div>
-          
-          {/* Printable Invoice */}
+
           <div ref={printRef}>
             {selectedBill && <PrintableInvoice bill={selectedBill} patient={getPatientInfo(selectedBill.patient_id)} />}
           </div>
@@ -662,11 +797,8 @@ export default function Billing() {
 // Printable Invoice Component
 function PrintableInvoice({ bill, patient }) {
   const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
   const numberToWords = (num) => {
@@ -679,121 +811,137 @@ function PrintableInvoice({ bill, patient }) {
     if (num < 0) return 'Minus ' + numberToWords(Math.abs(num));
 
     let words = '';
-    
-    if (Math.floor(num / 10000000) > 0) {
-      words += numberToWords(Math.floor(num / 10000000)) + ' Crore ';
-      num %= 10000000;
-    }
-    if (Math.floor(num / 100000) > 0) {
-      words += numberToWords(Math.floor(num / 100000)) + ' Lakh ';
-      num %= 100000;
-    }
-    if (Math.floor(num / 1000) > 0) {
-      words += numberToWords(Math.floor(num / 1000)) + ' Thousand ';
-      num %= 1000;
-    }
-    if (Math.floor(num / 100) > 0) {
-      words += ones[Math.floor(num / 100)] + ' Hundred ';
-      num %= 100;
-    }
+    if (Math.floor(num / 10000000) > 0) { words += numberToWords(Math.floor(num / 10000000)) + ' Crore '; num %= 10000000; }
+    if (Math.floor(num / 100000) > 0) { words += numberToWords(Math.floor(num / 100000)) + ' Lakh '; num %= 100000; }
+    if (Math.floor(num / 1000) > 0) { words += numberToWords(Math.floor(num / 1000)) + ' Thousand '; num %= 1000; }
+    if (Math.floor(num / 100) > 0) { words += ones[Math.floor(num / 100)] + ' Hundred '; num %= 100; }
     if (num > 0) {
       if (num < 10) words += ones[num];
       else if (num < 20) words += teens[num - 10];
-      else {
-        words += tens[Math.floor(num / 10)];
-        if (num % 10 > 0) words += ' ' + ones[num % 10];
-      }
+      else { words += tens[Math.floor(num / 10)]; if (num % 10 > 0) words += ' ' + ones[num % 10]; }
     }
     return words.trim();
   };
 
-  // Calculate totals from bill data
+  const isIP = bill.bill_type === 'IP';
   const itemsTotal = (bill.items || []).reduce((sum, i) => sum + (i.quantity * (i.sale_price || i.price || 0)), 0);
+  const consultationCharges = bill.consultation_charges || 0;
   const treatmentCharges = bill.treatment_charges || 0;
   const roomCharges = bill.room_charges || 0;
-  const consultationCharges = bill.consultation_charges || 0;
-  const therapyCharges = bill.therapy_charges || 0;
+  const messCharges = bill.mess_charges || 0;
   const otherCharges = bill.other_charges || 0;
-  const subtotal = bill.subtotal || (itemsTotal + treatmentCharges + roomCharges + consultationCharges + therapyCharges + otherCharges);
+  const subtotal = bill.subtotal || (itemsTotal + consultationCharges + treatmentCharges + roomCharges + messCharges + otherCharges);
   const discount = bill.discount || 0;
   const gstAmount = bill.gst_amount || 0;
   const gstRate = bill.gst_rate || (gstAmount > 0 ? 18 : 0);
   const grandTotal = bill.total_amount || 0;
 
+  const themeColor = isIP ? '#D4A373' : '#3A5A40';
+
   return (
-    <div style={{ 
-      width: '210mm', 
-      minHeight: '297mm', 
-      padding: '15mm', 
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '12px',
-      lineHeight: '1.5',
-      color: '#333',
-      background: '#fff'
-    }}>
-      {/* Header with Logo */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '3px solid #3A5A40', paddingBottom: '15px', marginBottom: '20px' }}>
+    <div style={{ width: '210mm', minHeight: '297mm', padding: '15mm', fontFamily: 'Arial, sans-serif', fontSize: '12px', lineHeight: '1.5', color: '#333', background: '#fff' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `3px solid ${themeColor}`, paddingBottom: '15px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          {/* Logo */}
-          <div style={{ 
-            width: '70px', 
-            height: '70px', 
-            background: 'linear-gradient(135deg, #3A5A40 0%, #588157 100%)',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontSize: '28px',
-            fontWeight: 'bold',
-            fontFamily: 'Georgia, serif'
-          }}>
-            TA
-          </div>
+          <div style={{ width: '70px', height: '70px', background: `linear-gradient(135deg, ${themeColor} 0%, ${isIP ? '#E8C49B' : '#588157'} 100%)`, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '28px', fontWeight: 'bold', fontFamily: 'Georgia, serif' }}>TA</div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '24px', color: '#3A5A40', fontFamily: 'Georgia, serif' }}>
-              {HOSPITAL_INFO.name}
-            </h1>
+            <h1 style={{ margin: 0, fontSize: '24px', color: themeColor, fontFamily: 'Georgia, serif' }}>{HOSPITAL_INFO.name}</h1>
             <p style={{ margin: '2px 0', fontSize: '11px', color: '#666' }}>{HOSPITAL_INFO.address}</p>
             <p style={{ margin: '2px 0', fontSize: '11px', color: '#666' }}>{HOSPITAL_INFO.city}</p>
-            <p style={{ margin: '2px 0', fontSize: '11px', color: '#666' }}>
-              Ph: {HOSPITAL_INFO.phone} | Email: {HOSPITAL_INFO.email}
-            </p>
+            <p style={{ margin: '2px 0', fontSize: '11px', color: '#666' }}>Ph: {HOSPITAL_INFO.phone} | Email: {HOSPITAL_INFO.email}</p>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <h2 style={{ margin: 0, fontSize: '28px', color: '#3A5A40', fontFamily: 'Georgia, serif' }}>TAX INVOICE</h2>
+          <h2 style={{ margin: 0, fontSize: '28px', color: themeColor, fontFamily: 'Georgia, serif' }}>TAX INVOICE</h2>
+          <p style={{ margin: '5px 0', fontSize: '14px', fontWeight: 'bold', color: themeColor }}>{isIP ? 'IN-PATIENT' : 'OUT-PATIENT'}</p>
           <p style={{ margin: '5px 0', fontSize: '11px', color: '#666' }}>{HOSPITAL_INFO.gstin}</p>
         </div>
       </div>
 
-      {/* Invoice Details */}
+      {/* Invoice & Patient Details */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', background: '#f8f9fa', padding: '15px', borderRadius: '8px' }}>
         <div>
           <p style={{ margin: '3px 0' }}><strong>Invoice No:</strong> INV-{bill.id.slice(0, 8).toUpperCase()}</p>
           <p style={{ margin: '3px 0' }}><strong>Date:</strong> {formatDate(bill.created_at)}</p>
-          <p style={{ margin: '3px 0' }}><strong>Patient Type:</strong> {patient.patient_type || 'General'}</p>
+          <p style={{ margin: '3px 0' }}><strong>Patient Type:</strong> <span style={{ color: themeColor, fontWeight: 'bold' }}>{isIP ? 'In-Patient (IP)' : 'Out-Patient (OP)'}</span></p>
+          {isIP && bill.admission_date && <p style={{ margin: '3px 0' }}><strong>Admission:</strong> {formatDate(bill.admission_date)}</p>}
+          {isIP && bill.discharge_date && <p style={{ margin: '3px 0' }}><strong>Discharge:</strong> {formatDate(bill.discharge_date)}</p>}
         </div>
         <div style={{ textAlign: 'right' }}>
           <p style={{ margin: '3px 0' }}><strong>Patient Name:</strong> {bill.patient_name || patient.name}</p>
           <p style={{ margin: '3px 0' }}><strong>Phone:</strong> {patient.phone || 'N/A'}</p>
           <p style={{ margin: '3px 0' }}><strong>Address:</strong> {patient.address || 'N/A'}</p>
+          {isIP && patient.room_number && <p style={{ margin: '3px 0' }}><strong>Room No:</strong> {patient.room_number}</p>}
         </div>
       </div>
 
-      {/* Items Table */}
+      {/* Charges Table */}
       <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
         <thead>
-          <tr style={{ background: '#3A5A40', color: 'white' }}>
-            <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #3A5A40' }}>S.No</th>
-            <th style={{ padding: '10px', textAlign: 'left', border: '1px solid #3A5A40' }}>Description</th>
-            <th style={{ padding: '10px', textAlign: 'center', border: '1px solid #3A5A40' }}>Qty</th>
-            <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #3A5A40' }}>Rate (₹)</th>
-            <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #3A5A40' }}>Amount (₹)</th>
+          <tr style={{ background: themeColor, color: 'white' }}>
+            <th style={{ padding: '10px', textAlign: 'left', border: `1px solid ${themeColor}` }}>S.No</th>
+            <th style={{ padding: '10px', textAlign: 'left', border: `1px solid ${themeColor}` }}>Description</th>
+            <th style={{ padding: '10px', textAlign: 'center', border: `1px solid ${themeColor}` }}>Qty</th>
+            <th style={{ padding: '10px', textAlign: 'right', border: `1px solid ${themeColor}` }}>Rate (₹)</th>
+            <th style={{ padding: '10px', textAlign: 'right', border: `1px solid ${themeColor}` }}>Amount (₹)</th>
           </tr>
         </thead>
         <tbody>
-          {/* Medicine/Items */}
+          {/* Service Charges */}
+          {consultationCharges > 0 && (
+            <tr style={{ background: '#fff' }}>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>1</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>{isIP ? 'Consultation Charges' : 'Consultation Fees'}</td>
+              <td style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>1</td>
+              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{consultationCharges.toFixed(2)}</td>
+              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{consultationCharges.toFixed(2)}</td>
+            </tr>
+          )}
+          {isIP && roomCharges > 0 && (
+            <tr style={{ background: '#f8f9fa' }}>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>-</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>Room Charges</td>
+              <td style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>1</td>
+              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{roomCharges.toFixed(2)}</td>
+              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{roomCharges.toFixed(2)}</td>
+            </tr>
+          )}
+          {treatmentCharges > 0 && (
+            <tr style={{ background: isIP && roomCharges > 0 ? '#fff' : '#f8f9fa' }}>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>-</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>Treatment Charges</td>
+              <td style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>1</td>
+              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{treatmentCharges.toFixed(2)}</td>
+              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{treatmentCharges.toFixed(2)}</td>
+            </tr>
+          )}
+          {isIP && messCharges > 0 && (
+            <tr style={{ background: '#f8f9fa' }}>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>-</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>Mess/Food Charges</td>
+              <td style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>1</td>
+              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{messCharges.toFixed(2)}</td>
+              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{messCharges.toFixed(2)}</td>
+            </tr>
+          )}
+          {otherCharges > 0 && (
+            <tr>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>-</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>Other Charges</td>
+              <td style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>1</td>
+              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{otherCharges.toFixed(2)}</td>
+              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{otherCharges.toFixed(2)}</td>
+            </tr>
+          )}
+
+          {/* Medicines Section Header */}
+          {(bill.items || []).length > 0 && (
+            <tr style={{ background: '#e8e8e8' }}>
+              <td colSpan={5} style={{ padding: '8px', border: '1px solid #ddd', fontWeight: 'bold' }}>Medicine Charges</td>
+            </tr>
+          )}
+
+          {/* Medicine Items */}
           {(bill.items || []).map((item, index) => (
             <tr key={index} style={{ background: index % 2 === 0 ? '#fff' : '#f8f9fa' }}>
               <td style={{ padding: '8px', border: '1px solid #ddd' }}>{index + 1}</td>
@@ -803,79 +951,16 @@ function PrintableInvoice({ bill, patient }) {
               <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{(item.quantity * (item.sale_price || item.price || 0)).toFixed(2)}</td>
             </tr>
           ))}
-          
-          {/* Service Charges */}
-          {consultationCharges > 0 && (
-            <tr style={{ background: '#f8f9fa' }}>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>{(bill.items || []).length + 1}</td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>Consultation Charges</td>
-              <td style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>1</td>
-              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{consultationCharges.toFixed(2)}</td>
-              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{consultationCharges.toFixed(2)}</td>
-            </tr>
-          )}
-          {treatmentCharges > 0 && (
-            <tr>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>-</td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>Treatment Charges</td>
-              <td style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>1</td>
-              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{treatmentCharges.toFixed(2)}</td>
-              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{treatmentCharges.toFixed(2)}</td>
-            </tr>
-          )}
-          {therapyCharges > 0 && (
-            <tr style={{ background: '#f8f9fa' }}>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>-</td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>Therapy Charges</td>
-              <td style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>1</td>
-              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{therapyCharges.toFixed(2)}</td>
-              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{therapyCharges.toFixed(2)}</td>
-            </tr>
-          )}
-          {roomCharges > 0 && (
-            <tr>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>-</td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>Room Charges</td>
-              <td style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>1</td>
-              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{roomCharges.toFixed(2)}</td>
-              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{roomCharges.toFixed(2)}</td>
-            </tr>
-          )}
-          {otherCharges > 0 && (
-            <tr style={{ background: '#f8f9fa' }}>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>-</td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>Other Charges</td>
-              <td style={{ padding: '8px', textAlign: 'center', border: '1px solid #ddd' }}>1</td>
-              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{otherCharges.toFixed(2)}</td>
-              <td style={{ padding: '8px', textAlign: 'right', border: '1px solid #ddd' }}>{otherCharges.toFixed(2)}</td>
-            </tr>
-          )}
         </tbody>
       </table>
 
       {/* Totals */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
         <div style={{ width: '300px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee' }}>
-            <span>Subtotal:</span>
-            <span>₹{subtotal.toFixed(2)}</span>
-          </div>
-          {discount > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee', color: '#BC4749' }}>
-              <span>Discount:</span>
-              <span>-₹{discount.toFixed(2)}</span>
-            </div>
-          )}
-          {gstAmount > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee' }}>
-              <span>GST ({gstRate}%):</span>
-              <span>₹{gstAmount.toFixed(2)}</span>
-            </div>
-          )}
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', fontWeight: 'bold', fontSize: '16px', background: '#3A5A40', color: 'white', paddingLeft: '10px', paddingRight: '10px', marginTop: '5px', borderRadius: '4px' }}>
-            <span>Grand Total:</span>
-            <span>₹{grandTotal.toFixed(2)}</span>
-          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee' }}><span>Subtotal:</span><span>₹{subtotal.toFixed(2)}</span></div>
+          {discount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee', color: '#BC4749' }}><span>Discount:</span><span>-₹{discount.toFixed(2)}</span></div>}
+          {gstAmount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid #eee' }}><span>GST ({gstRate}%):</span><span>₹{gstAmount.toFixed(2)}</span></div>}
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', fontWeight: 'bold', fontSize: '16px', background: themeColor, color: 'white', marginTop: '5px', borderRadius: '4px' }}><span>Grand Total:</span><span>₹{grandTotal.toFixed(2)}</span></div>
         </div>
       </div>
 
@@ -887,11 +972,7 @@ function PrintableInvoice({ bill, patient }) {
       {/* Payment Status */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px' }}>
         <div>
-          <p style={{ margin: '3px 0' }}><strong>Payment Status:</strong> <span style={{ 
-            color: bill.status === 'paid' ? '#588157' : bill.status === 'partial' ? '#D4A373' : '#BC4749',
-            textTransform: 'uppercase',
-            fontWeight: 'bold'
-          }}>{bill.status}</span></p>
+          <p style={{ margin: '3px 0' }}><strong>Payment Status:</strong> <span style={{ color: bill.status === 'paid' ? '#588157' : bill.status === 'partial' ? '#D4A373' : '#BC4749', textTransform: 'uppercase', fontWeight: 'bold' }}>{bill.status}</span></p>
           <p style={{ margin: '3px 0' }}><strong>Amount Paid:</strong> ₹{(bill.paid_amount || 0).toFixed(2)}</p>
           <p style={{ margin: '3px 0' }}><strong>Balance Due:</strong> ₹{(grandTotal - (bill.paid_amount || 0)).toFixed(2)}</p>
         </div>
@@ -908,6 +989,7 @@ function PrintableInvoice({ bill, patient }) {
             <li>Payment is due upon receipt of this invoice.</li>
             <li>All medicines once sold are non-refundable.</li>
             <li>This is a computer-generated invoice.</li>
+            {isIP && <li>Room charges are calculated based on actual stay duration.</li>}
           </ol>
         </div>
         <div style={{ width: '35%', textAlign: 'center' }}>
@@ -918,7 +1000,7 @@ function PrintableInvoice({ bill, patient }) {
       </div>
 
       {/* Footer */}
-      <div style={{ marginTop: '40px', paddingTop: '15px', borderTop: '2px solid #3A5A40', textAlign: 'center', fontSize: '10px', color: '#666' }}>
+      <div style={{ marginTop: '40px', paddingTop: '15px', borderTop: `2px solid ${themeColor}`, textAlign: 'center', fontSize: '10px', color: '#666' }}>
         <p style={{ margin: '3px 0' }}>Thank you for choosing {HOSPITAL_INFO.name}</p>
         <p style={{ margin: '3px 0' }}>"Healing through the wisdom of Ayurveda"</p>
         <p style={{ margin: '3px 0' }}>For queries, contact us at {HOSPITAL_INFO.phone} | {HOSPITAL_INFO.email}</p>
