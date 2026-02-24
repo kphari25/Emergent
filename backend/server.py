@@ -1101,6 +1101,8 @@ def ensure_bill_profit_fields(bill: dict) -> dict:
             bill['consultation_charges'] = 0
         if 'therapy_charges' not in bill:
             bill['therapy_charges'] = 0
+        if 'mess_charges' not in bill:
+            bill['mess_charges'] = 0
         if 'other_charges' not in bill:
             bill['other_charges'] = 0
         if 'discount' not in bill:
@@ -1113,6 +1115,12 @@ def ensure_bill_profit_fields(bill: dict) -> dict:
             bill['gst_amount'] = 0
         if 'payment_method' not in bill:
             bill['payment_method'] = None
+        if 'bill_type' not in bill:
+            bill['bill_type'] = 'OP'
+        if 'admission_date' not in bill:
+            bill['admission_date'] = None
+        if 'discharge_date' not in bill:
+            bill['discharge_date'] = None
     return bill
 
 @api_router.post("/bills", response_model=BillResponse)
