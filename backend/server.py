@@ -1224,10 +1224,10 @@ async def record_payment(payment: PaymentRequest, current_user: dict = Depends(g
     
     await db.bills.update_one(
         {'id': payment.bill_id},
-        {'$set': {'paid_amount': new_paid, 'status': status}}
+        {'$set': {'paid_amount': new_paid, 'status': status, 'payment_method': payment.payment_method}}
     )
     updated = await db.bills.find_one({'id': payment.bill_id}, {'_id': 0})
-    return updated
+    return ensure_bill_profit_fields(updated)
 
 # ==================== ROOM ROUTES ====================
 
