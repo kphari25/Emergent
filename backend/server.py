@@ -143,8 +143,16 @@ class AppointmentResponse(BaseModel):
 class BillCreate(BaseModel):
     patient_id: str
     items: List[dict]  # [{name, quantity, sale_price, purchase_price}]
-    treatment_charges: float
+    treatment_charges: float = 0
     room_charges: float = 0
+    consultation_charges: float = 0
+    therapy_charges: float = 0
+    other_charges: float = 0
+    discount: float = 0
+    gst_rate: float = 0
+    gst_amount: float = 0
+    subtotal: float = 0
+    total_amount: float = 0
     notes: Optional[str] = ""
 
 class BillResponse(BaseModel):
@@ -154,11 +162,19 @@ class BillResponse(BaseModel):
     items: List[dict]  # [{name, quantity, sale_price, purchase_price, profit}]
     treatment_charges: float
     room_charges: float
+    consultation_charges: float = 0
+    therapy_charges: float = 0
+    other_charges: float = 0
+    discount: float = 0
+    subtotal: float = 0
+    gst_rate: float = 0
+    gst_amount: float = 0
     total_amount: float
     total_cost: float  # Total purchase cost
     total_profit: float  # Profit from items
     paid_amount: float
     status: str  # pending, partial, paid
+    payment_method: Optional[str] = None
     notes: str
     created_at: str
 
