@@ -1150,9 +1150,10 @@ async def create_bill(bill: BillCreate, current_user: dict = Depends(get_current
     
     total_profit = total_sale - total_cost
     
-    # Calculate subtotal with all charges
+    # Calculate subtotal with all charges (including mess_charges for IP)
     subtotal = (total_sale + bill.treatment_charges + bill.room_charges + 
-                bill.consultation_charges + bill.therapy_charges + bill.other_charges)
+                bill.consultation_charges + bill.therapy_charges + 
+                bill.mess_charges + bill.other_charges)
     
     # Apply discount
     discounted_total = subtotal - bill.discount
@@ -1168,11 +1169,13 @@ async def create_bill(bill: BillCreate, current_user: dict = Depends(get_current
         'id': bill_id,
         'patient_id': bill.patient_id,
         'patient_name': patient['name'],
+        'bill_type': bill.bill_type,
         'items': items_with_profit,
         'treatment_charges': bill.treatment_charges,
         'room_charges': bill.room_charges,
         'consultation_charges': bill.consultation_charges,
         'therapy_charges': bill.therapy_charges,
+        'mess_charges': bill.mess_charges,
         'other_charges': bill.other_charges,
         'discount': bill.discount,
         'subtotal': subtotal,
@@ -1185,6 +1188,8 @@ async def create_bill(bill: BillCreate, current_user: dict = Depends(get_current
         'status': 'pending',
         'payment_method': None,
         'notes': bill.notes or "",
+        'admission_date': bill.admission_date,
+        'discharge_date': bill.discharge_date,
         'created_at': datetime.now(timezone.utc).isoformat()
     }
     await db.bills.insert_one(bill_doc)
