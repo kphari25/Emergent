@@ -1,205 +1,149 @@
 <analysis>**original_problem_statement:**
-The user requested to build a comprehensive Ayurvedic hospital management program. The initial request included inventory management and IP/OP (In-patient/Out-patient) check-in. The scope was expanded during the conversation to include:
--   **Patient Management**: Scheduling, treatment records.
--   **Inventory Management**: Tracking with purchase price, markup percentage for sale price, and reporting for fast/slow-moving items.
--   **Billing**: Patient billing, payment tracking, and profit calculation on each sale.
--   **Reporting**: Detailed reports for total IP/OP patients, revenue, expenses, medicine sales, profit/loss.
--   **HR Module**: Staff list and salary management.
--   **Rebranding**: The application was rebranded to Tatva Ayurved with a custom logo.
--   **Prescription Management**: Patient-specific reports with prescribed medicines and automatic stock deduction.
--   **User & Access Management**: Role-based access control (RBAC), user management for an Admin role (add/delete/reset password), and a password reset feature on the login page.
--   **Deployment**: A setup script and instructions for local deployment.
+The user requested to build a comprehensive Ayurvedic hospital management program, Tatva Ayurved. The application must include Patient Management (IP/OP check-in), Inventory Management (tracking purchase/sale price, markup, imports), Billing (distinct IP/OP sections, GST, A4 printable invoices with hospital details), Reporting (financials, stats), an HR Module (staff/salary), and a Role-Based Access Control (RBAC) system. The user also required comprehensive instructions for local deployment and self-hosting, specifically on Windows.
 
 **User's preferred language**: English
+*(INSTRUCTION: Next agent MUST respond in English)*
 
-**what currently exists?**
-A full-stack application, Tatva Ayurved, has been developed using a FastAPI backend, React frontend, and MongoDB database.
-
-The application includes the following completed modules:
--   **Authentication**: JWT-based authentication with user registration and login.
--   **Patient Management**: Patient registration, IP/OP check-in/out workflows, and a detailed patient view with their complete history (prescriptions, visits, bills).
--   **Inventory Management**: Full CRUD for inventory items, including tracking purchase price, markup, and auto-calculated sale price. It features analytics for fast/slow-moving stock and low-stock alerts.
--   **Prescription Management**: Doctors can create prescriptions for patients, and the prescribed medicines are automatically deducted from the inventory.
--   **Billing & Finance**: Creation of bills with treatments and items, tracking payment status, and calculating profit per sale.
--   **Reporting Dashboard**: A comprehensive dashboard displaying financial summaries (revenue, expenses, profit/loss), medicine profit, patient statistics, and inventory analytics.
--   **HR Module**: A section for managing staff and recording salary payments.
--   **Local Setup**: A  script and  have been created to guide the user through local installation.
+**what currently exists?** 
+A full-stack application (FastAPI + React + MongoDB) with the following features:
+- **Authentication & RBAC**: JWT auth with role-based route protection. Distinct roles (Admin, Doctor, Front Desk, Therapist, HR) controlling frontend navigation and backend API access.
+- **Patient Management**: Full CRUD, check-in/out, and CSV/Excel import functionality.
+- **Inventory Management**: Full CRUD, edit item details, CSV/Excel imports, automated sale price calculation based on purchase price + markup, stock deduction on prescriptions.
+- **Billing System**: Separate tabs for IP (In-Patient) and OP (Out-Patient) bills. IP includes admission dates, room, and mess charges. OP focuses on consultation and treatment. Includes 18% GST calculation and generates a printable A4 Tax Invoice with hospital branding.
+- **Reports & HR**: Financial dashboards, staff management, and user management (Admin only).
+- **Deployment Guides**: Extensive documentation and scripts for self-hosting and Windows installation.
 
 **Last working item**:
--   **Last item agent was working**: The user requested the implementation of a complete Role-Based Access Control (RBAC) system. This includes creating specific user roles (Admin, Doctor, Front Desk, Therapist, HR), restricting access to the 'HR' and 'Reports' pages for non-admin roles, and providing user management functionalities (add user, delete user, reset password) exclusively for the 'Admin' role. A password reset feature for the login page was also requested.
--   **Status**: NOT STARTED
--   **Agent Testing Done**: N
--   **Which testing method agent to use?**: both
--   **User Testing Done**: N
+    - Last item agent was working: The agent was answering the user's questions regarding 24/7 cloud hosting costs and providing instructions on how to download the codebase for local Windows installation. All coding requests (like the IP/OP distinct billing and A4 invoice) were completed prior to this.
+    - Status: NONE
+    - Agent Testing Done: Y
+    - Which testing method agent to use?: both (testing subagent was used for RBAC, screenshots and curl were used for billing and imports)
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1**: Implement Role-Based Access Control (RBAC) and User Management (P0)
-
-    **Issues Detail**:
-    -   **Issue 1**: The user requires a robust RBAC system. The agent has acknowledged the requirements but has not yet started the implementation.
-        -   **Attempted fixes**: None.
-        -   **Next debug checklist**:
-            -   **Backend ()**:
-                -   Create a dependency injector for role-checking on protected routes.
-                -   Protect sensitive endpoints (e.g., reports, HR, user management) with role-based decorators.
-                -   Implement API endpoints for user management:  (create),  (delete), .
-                -   Implement endpoints for a public password reset flow (, ).
-            -   **Frontend**:
-                -   Create a new User Management page accessible only to admins.
-                -   Conditionally render navigation links (HR, Reports) in  based on user role from .
-                -   Add a Forgot Password? link on .
-        -   **Why fix this issue and what will be achieved with the fix?**: This will secure the application by ensuring users can only access modules and perform actions appropriate for their roles.
-        -   **Status**: NOT STARTED
-        -   **Is recurring issue?**: N
-        -   **Should Test frontend/backend/both after fix?**: both
-        -   **Blocked on other issue**: None
+  Issue 1: Minor accessibility warnings and automation timing issues (P2)
+  
+  Issues Detail:
+  - Issue 1: 
+     - Attempted fixes: None.
+     - Next debug checklist: Review frontend components (, , etc.) and add necessary  or role attributes.
+     - Why fix this issue and what will be achieved with the fix? Improves application accessibility for users with disabilities and fixes warnings highlighted by the testing agent in previous iterations.
+     - Status: NOT STARTED
+     - Is recurring issue? Y (Appeared in multiple past test reports)
+     - Should Test frontend/backend/both after fix? frontend
+     - Blocked on other issue: None
 
 **In progress Task List**:
--   There are no partially completed tasks. The next task (RBAC implementation) is yet to be started.
+*(No tasks currently in progress)*
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks**:
-    -   (P0) Implement complete RBAC, user management, and password reset functionality.
--   **Future Tasks**:
-    -   (P1) Implement payroll reminders that notify the admin when salary payments are due.
+  Future Tasks:
+  - (P1) Implement payroll reminders that notify the admin when salary payments are due.
 
 **Completed work in this session**
--   **Ayurvedic Hospital Management System**: Initial application setup.
--   **Patient Management**: Implemented in  and .
--   **Inventory & Pricing**: Implemented in  with purchase price, markup, and profit tracking in .
--   **Prescription & Stock Deduction**: Added in  and corresponding logic in .
--   **Billing & Profit Tracking**: Implemented in  and .
--   **HR Module**: Created  page and backend endpoints.
--   **Financial Reports**: Enhanced  to include detailed financial metrics and profit.
--   **Rebranding**: Updated multiple frontend files (, , etc.) with the Tatva Ayurved brand and logo.
--   **Local Installation Setup**: Created  and .
+- Role-Based Access Control (RBAC) and User Management page implementation (DONE)
+- Removed Register tab from public Login page (DONE)
+- Patient and Inventory bulk import functionality via CSV/Excel (DONE)
+- Edit functionality for Inventory items (DONE)
+- Admin password reset directly in the database (DONE)
+- Enhanced Billing system with GST support and A4 printable Tax Invoices (DONE)
+- Distinct IP and OP tabs in the Billing module with specific charge categories like Mess and Room charges (DONE)
+- Created , , and  (DONE)
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1**: Minor accessibility warnings () and occasional automation timing issues were reported by the testing agent.
-    -   **Debug checklist**: Review component implementations and add the necessary ARIA attributes.
-    -   **Why to solve this issue and what will be achieved with this?**: Improves application accessibility for users with disabilities.
-    -   **Should Test frontend/backend/both after fix**: frontend
-    -   **Is recurring issue?**: Y (appeared in multiple test reports)
+   - Issue 1: 
+   - Debug checklist: Minor UI accessibility warnings (missing ARIA labels). Check frontend files for missing  tags.
+   - Why to solve this issue and what will be achieved with this? Improves compliance with accessibility standards.
+   - Should Test frontend/backend/both after fix: frontend
+   - Is recurring issue? Y
 
 **Known issue recurrence from previous fork**
--   N/A
+  - Issue recurrence in previous fork: N/A
+  - Recurrence count: 0
+  - Status: RESOLVED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend**: FastAPI, MongoDB (with ), Pydantic models, JWT authentication.
--   **Frontend**: React, React Router, Axios, Tailwind CSS, Shadcn/UI, Recharts.
--   **Architecture**: Single Page Application (SPA) with a monolithic REST API backend.
+- Backend: FastAPI, MongoDB (Motor), PyJWT, Pandas & Openpyxl (for file imports).
+- Frontend: React, Tailwind CSS, Shadcn/UI, Axios, Recharts.
+- Architecture: SPA with a monolithic REST API backend.
 
 **key DB schema**
--   **users**: {id, name, email, hashed_password, role}
--   **patients**: {id, name, age, gender, status, token_number, room_id}
--   **inventory_items**: {id, name, quantity, purchase_price, markup_percentage, sale_price}
--   **bills**: {id, patient_id, items, total_amount, status, profit}
--   **prescriptions**: {id, patient_id, doctor_id, diagnosis, medicines}
--   **staff**: {id, name, role, salary}
+  - users: {id, name, email, hashed_password, role}
+  - patients: {id, name, age, gender, status, patient_type, medical_history}
+  - inventory_items: {id, name, category, quantity, unit, min_stock_alert, purchase_price, markup_percentage, sale_price}
+  - bills: {id, patient_id, bill_type (IP/OP), items, consultation_charges, room_charges, treatment_charges, mess_charges, other_charges, discount, include_gst, subtotal, gst_amount, total_amount, status}
+  - prescriptions: {id, patient_id, doctor_id, diagnosis, medicines}
+  - staff: {id, name, role, salary}
 
 **changes in tech stack**
--   None.
+  - Added  and  to  to handle Excel and CSV parsing for bulk imports.
 
 **All files of reference**
--   : Contains all backend logic, models, and API routes.
--   : Directory containing all frontend page components.
--   : Manages user authentication state globally.
--   : Defines the main structure with the sidebar navigation.
--   : Contains setup instructions for local deployment.
--   ==========================================
-  Tatva Ayurved - Local Setup
-==========================================
+  - : Updated with RBAC middleware, Import endpoints, and IP/OP billing structure.
+  - : Heavily modified to include IP/OP tabs, GST calculations, and printable invoice layout.
+  - : Updated with Edit and Import functionalities.
+  - : Newly created for Admin RBAC control.
+  - : Updated to conditionally render sidebar items based on RBAC.
+  -  & : Newly created guides requested by the user.
 
-Checking prerequisites...
-✅ Python found: Python 3.11.14
-✅ Node.js found: v20.20.0
-
-Setting up Backend...
-Creating Python virtual environment...
-Activating virtual environment...
-Installing Python dependencies...
-
-Setting up Frontend...
-Installing Node.js dependencies...
-
-==========================================
-  Setup Complete!
-==========================================
-
-To run the application:
-
-1. Start MongoDB (if running locally)
-   mongod --dbpath /path/to/data
-
-2. Start Backend (Terminal 1):
-   cd backend
-   source venv/bin/activate
-   uvicorn server:app --host 0.0.0.0 --port 8001 --reload
-
-3. Start Frontend (Terminal 2):
-   cd frontend
-   yarn start  # or npm start
-
-4. Open http://localhost:3000 in your browser
-
-Default Login: admin@ayurcare.com / admin123: Script to automate local environment setup.
-
-**Areas that need refactoring**:
--   The  file has grown into a monolith containing all models, routes, and business logic. It should be refactored into a more modular structure (e.g., separate files for models, schemas, and routers for each feature).
+**Areas that need refactoring**: 
+-  is an extreme monolith containing all schemas, database interactions, auth logic, and API routes. Needs to be split into a standard FastAPI router/controller structure for better maintainability.
 
 **key api endpoints**
--   : User login.
--   : CRUD for patients.
--   : CRUD for inventory.
--   : CRUD for bills.
--   : CRUD for prescriptions.
--   : CRUD for HR staff.
--   : Retrieves aggregated financial data.
+- 
+-  (Admin only)
+-  & 
+-  (Now handles  of IP or OP)
 
 **Critical Info for New Agent**
--   The current and most important task is to implement the role-based access control (RBAC) system as specified by the user. This includes both backend API protection and frontend conditional rendering of UI elements (like navigation links).
--   The application structure consists of a single large  file for the backend. Be mindful of this when adding new endpoints and logic.
--   The user has explicitly requested user management features for an 'Admin' role and a password reset mechanism.
--   Use the existing authentication context () to manage and access the user's role on the frontend.
+- **Admin Password Reset**: The admin password was manually reset in the DB to  for the email . The user experienced local caching issues, but the backend verified it works perfectly.
+- **RBAC Enforcement**: Routes are strictly protected. Ensure any new admin/HR specific routes in  use the  or respective role dependency.
+- **Mocked Feature**: The Forgot Password flow does not actually send an email. It prints the reset token to the backend supervisor logs.
 
 **documents and test reports created in this job**
--   
--   
--   
--   
--   
+  - 
+  - 
+  - 
+  - 
 
-**Last 10 User Messages and any pending HUMAN messages**
-1.  **User Request**: please implement role based access control (Status: Pending)
-2.  **User Request**: summarize what you have done so far (Status: Completed)
-3.  **User Request**: Repetition of the RBAC and user management request. (Status: Pending)
-4.  **User Request**: Repetition of the RBAC request. (Status: Pending)
-5.  **User Request**: Initial detailed request for RBAC and user management features. (Status: Pending)
-6.  **User Request**: Add patient-specific reports with prescribed medicines and automatic stock deduction. (Status: Completed)
-7.  **User Request**: Add purchase price, markup, and profit tracking to inventory. (Status: Completed)
-8.  **User Request**: Rebrand the app to Tatva Ayurved and add a logo. (Status: Completed)
-9.  **User Request**: Create a downloadable/installable version of the app. (Status: Completed -  provided).
-10. **User Request**: Add detailed financial reports and an HR module. (Status: Completed)
+**Last 10 User Messages and any pending HUMAN messages** 
+ 1. User: If I run this 24x7, how much will this cost me (Completed - provided cost breakdown)
+ 2. User: how to download my code (Completed - provided instructions)
+ 3. User: give me complete instructions to install it on a windows machine (Completed - created markdown guide)
+ 4. User: how to download the code (Completed - answered)
+ 5. User: Requested distinct IP and OP invoice tabs with specific charges like Mess, Room, Consultation. (Completed)
+ 6. User: Requested GST and printable A4 invoice with specific hospital branding. (Completed)
+ 7. User: please prepare the self-hosting setup guide and instructions (Completed)
+ 8. User: Asked about hosting costs and 50 credits/month pricing. (Completed)
+ 9. User: will this website and application be available or do i need to pay for credits..... (Completed - explained hosting vs dev environment)
+ 10. User: same problem.....I am getting invalid credentials (Completed - diagnosed as browser cache issue on user side, credentials confirmed working)
 
 **Project Health Check:**
--   **Broken**: No currently known broken features.
--   **Mocked**: The password reset flow will need a mocked email service (e.g., logging the token to the console) as no email integration is set up.
+- Broken: None
+- Mocked: Password reset email feature (token is logged to console).
 
 **3rd Party Integrations**
--   None.
+- None currently implemented or requiring keys. 
 
 **Testing status**
--   **Testing agent used after significant changes**: YES
--   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: None.
--   **Known regressions**: None.
+  - Testing agent used after significant changes: YES
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: None
+  - Known regressions: None
 
 **Credentials to test flow:**
--   **Admin**:  / 
--   **Doctor**:  / 
+  - Admin:  /  *(Note password was updated during this session)*
+  - Doctor:  / 
 
 **What agent forgot to execute**
--   The agent has not addressed the minor, low-priority accessibility issues ( warnings) that were identified by the testing agent in previous test runs.</analysis>
+- The agent continued to ignore the minor frontend accessibility warnings ( missing) that were originally raised by the testing agent in earlier iterations.
+
+**Debugging checklist for current issue**
+    Issue: Frontend accessibility warnings (Low Priority / P2)
+    Frontend files to check: , 
+    Backend files to check: N/A
+    Database to check: N/A
+    Action: Check for form inputs and dialogs missing appropriate  or  tags.</analysis>
