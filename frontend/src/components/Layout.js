@@ -11,7 +11,8 @@ import {
   Menu,
   X,
   UserCog,
-  ShieldCheck
+  ShieldCheck,
+  UtensilsCrossed
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ const allNavItems = [
   { path: '/inventory', label: 'Inventory', icon: Package, restricted: false },
   { path: '/appointments', label: 'Appointments', icon: Calendar, restricted: false },
   { path: '/billing', label: 'Billing', icon: Receipt, restricted: false },
+  { path: '/mess', label: 'Mess', icon: UtensilsCrossed, restricted: false },
   { path: '/hr', label: 'HR', icon: UserCog, restricted: true },
   { path: '/reports', label: 'Reports', icon: BarChart3, restricted: true },
   { path: '/users', label: 'Users', icon: ShieldCheck, adminOnly: true },

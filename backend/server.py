@@ -1574,6 +1574,228 @@ async def get_all_salary_payments(month: Optional[str] = None, current_user: dic
     payments = await db.salary_payments.find(query, {'_id': 0}).to_list(1000)
     return payments
 
+# ==================== LEAVE MANAGEMENT ====================
+
+class LeaveCreate(BaseModel):
+    staff_id: str
+    leave_date: str  # YYYY-MM-DD
+    leave_type: str = "casual"  # casual, sick, earned, other
+    from_time: Optional[str] = None  # HH:MM (for half-day)
+    to_time: Optional[str] = None
+    is_half_day: bool = False
+    reason: Optional[str] = ""
+
+@api_router.post("/leaves")
+async def create_leave(leave: LeaveCreate, current_user: dict = Depends(require_hr_access)):
+    staff = await db.staff.find_one({'id': leave.staff_id}, {'_id': 0})
+    if not staff:
+        raise HTTPException(status_code=404, detail="Staff not found")
+    leave_id = str(uuid.uuid4())
+    leave_doc = {
+        'id': leave_id,
+        'staff_id': leave.staff_id,
+        'staff_name': staff['name'],
+        'leave_date': leave.leave_date,
+        'leave_type': leave.leave_type,
+        'from_time': leave.from_time or "",
+        'to_time': leave.to_time or "",
+        'is_half_day': leave.is_half_day,
+        'reason': leave.reason or "",
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.leaves.insert_one(leave_doc)
+    return await db.leaves.find_one({'id': leave_id}, {'_id': 0})
+
+@api_router.get("/leaves")
+async def get_leaves(staff_id: Optional[str] = None, month: Optional[str] = None, current_user: dict = Depends(require_hr_access)):
+    query = {}
+    if staff_id:
+        query['staff_id'] = staff_id
+    if month:
+        query['leave_date'] = {'$regex': f'^{month}'}
+    leaves = await db.leaves.find(query, {'_id': 0}).sort('leave_date', -1).to_list(1000)
+    return leaves
+
+@api_router.get("/leaves/staff/{staff_id}")
+async def get_staff_leaves(staff_id: str, current_user: dict = Depends(require_hr_access)):
+    leaves = await db.leaves.find({'staff_id': staff_id}, {'_id': 0}).sort('leave_date', -1).to_list(1000)
+    return leaves
+
+@api_router.get("/leaves/summary")
+async def get_leave_summary(current_user: dict = Depends(require_hr_access)):
+    staff_list = await db.staff.find({'status': 'active'}, {'_id': 0}).to_list(1000)
+    current_year = datetime.now(timezone.utc).strftime('%Y')
+    summaries = []
+    for s in staff_list:
+        leaves = await db.leaves.find({
+            'staff_id': s['id'],
+            'leave_date': {'$regex': f'^{current_year}'}
+        }, {'_id': 0}).to_list(1000)
+        total_days = sum(0.5 if l.get('is_half_day') else 1 for l in leaves)
+        by_type = {}
+        for l in leaves:
+            lt = l.get('leave_type', 'casual')
+            by_type[lt] = by_type.get(lt, 0) + (0.5 if l.get('is_half_day') else 1)
+        summaries.append({
+            'staff_id': s['id'],
+            'staff_name': s['name'],
+            'department': s['department'],
+            'total_leaves': total_days,
+            'by_type': by_type
+        })
+    return summaries
+
+@api_router.delete("/leaves/{leave_id}")
+async def delete_leave(leave_id: str, current_user: dict = Depends(require_hr_access)):
+    result = await db.leaves.delete_one({'id': leave_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Leave record not found")
+    return {"message": "Leave record deleted"}
+
+# ==================== MESS MANAGEMENT ====================
+
+class MealPriceUpdate(BaseModel):
+    breakfast: float = 0
+    lunch: float = 0
+    dinner: float = 0
+    snacks: float = 0
+    tea_coffee: float = 0
+
+class PatientMealCreate(BaseModel):
+    patient_id: str
+    date: str  # YYYY-MM-DD
+    breakfast: bool = False
+    lunch: bool = False
+    dinner: bool = False
+    snacks: bool = False
+    tea_coffee: bool = False
+    notes: Optional[str] = ""
+
+@api_router.get("/mess/settings")
+async def get_mess_settings(current_user: dict = Depends(get_current_user)):
+    settings = await db.mess_settings.find_one({'type': 'meal_prices'}, {'_id': 0})
+    if not settings:
+        default = {
+            'type': 'meal_prices',
+            'breakfast': 80,
+            'lunch': 120,
+            'dinner': 120,
+            'snacks': 50,
+            'tea_coffee': 30,
+            'updated_at': datetime.now(timezone.utc).isoformat()
+        }
+        await db.mess_settings.insert_one(default)
+        return {k: v for k, v in default.items() if k != '_id'}
+    return settings
+
+@api_router.put("/mess/settings")
+async def update_mess_settings(prices: MealPriceUpdate, current_user: dict = Depends(require_hr_access)):
+    update_data = prices.model_dump()
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    await db.mess_settings.update_one(
+        {'type': 'meal_prices'},
+        {'$set': update_data},
+        upsert=True
+    )
+    return await db.mess_settings.find_one({'type': 'meal_prices'}, {'_id': 0})
+
+@api_router.post("/mess/meals")
+async def assign_patient_meal(meal: PatientMealCreate, current_user: dict = Depends(get_current_user)):
+    patient = await db.patients.find_one({'id': meal.patient_id}, {'_id': 0})
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    prices = await db.mess_settings.find_one({'type': 'meal_prices'}, {'_id': 0})
+    if not prices:
+        prices = {'breakfast': 80, 'lunch': 120, 'dinner': 120, 'snacks': 50, 'tea_coffee': 30}
+    total = 0
+    if meal.breakfast:
+        total += prices.get('breakfast', 0)
+    if meal.lunch:
+        total += prices.get('lunch', 0)
+    if meal.dinner:
+        total += prices.get('dinner', 0)
+    if meal.snacks:
+        total += prices.get('snacks', 0)
+    if meal.tea_coffee:
+        total += prices.get('tea_coffee', 0)
+
+    # Check if meal record already exists for this patient+date
+    existing = await db.patient_meals.find_one({
+        'patient_id': meal.patient_id,
+        'date': meal.date
+    })
+    meal_id = str(uuid.uuid4()) if not existing else existing['id']
+    meal_doc = {
+        'id': meal_id,
+        'patient_id': meal.patient_id,
+        'patient_name': patient['name'],
+        'date': meal.date,
+        'breakfast': meal.breakfast,
+        'lunch': meal.lunch,
+        'dinner': meal.dinner,
+        'snacks': meal.snacks,
+        'tea_coffee': meal.tea_coffee,
+        'total_cost': total,
+        'notes': meal.notes or "",
+        'created_by': current_user['id'],
+        'updated_at': datetime.now(timezone.utc).isoformat()
+    }
+    if existing:
+        await db.patient_meals.update_one({'id': meal_id}, {'$set': meal_doc})
+    else:
+        meal_doc['created_at'] = datetime.now(timezone.utc).isoformat()
+        await db.patient_meals.insert_one(meal_doc)
+    return await db.patient_meals.find_one({'id': meal_id}, {'_id': 0})
+
+@api_router.get("/mess/meals")
+async def get_patient_meals(date: Optional[str] = None, patient_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if date:
+        query['date'] = date
+    if patient_id:
+        query['patient_id'] = patient_id
+    meals = await db.patient_meals.find(query, {'_id': 0}).sort('date', -1).to_list(1000)
+    return meals
+
+@api_router.get("/mess/meals/patient/{patient_id}")
+async def get_patient_meal_history(patient_id: str, current_user: dict = Depends(get_current_user)):
+    meals = await db.patient_meals.find({'patient_id': patient_id}, {'_id': 0}).sort('date', -1).to_list(100)
+    return meals
+
+@api_router.get("/mess/summary")
+async def get_mess_summary(date: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if date:
+        query['date'] = date
+    else:
+        query['date'] = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    meals = await db.patient_meals.find(query, {'_id': 0}).to_list(1000)
+    total_cost = sum(m.get('total_cost', 0) for m in meals)
+    breakfast_count = sum(1 for m in meals if m.get('breakfast'))
+    lunch_count = sum(1 for m in meals if m.get('lunch'))
+    dinner_count = sum(1 for m in meals if m.get('dinner'))
+    snacks_count = sum(1 for m in meals if m.get('snacks'))
+    tea_coffee_count = sum(1 for m in meals if m.get('tea_coffee'))
+    return {
+        'date': query['date'],
+        'total_patients': len(meals),
+        'total_cost': total_cost,
+        'breakdown': {
+            'breakfast': breakfast_count,
+            'lunch': lunch_count,
+            'dinner': dinner_count,
+            'snacks': snacks_count,
+            'tea_coffee': tea_coffee_count
+        }
+    }
+
+@api_router.delete("/mess/meals/{meal_id}")
+async def delete_patient_meal(meal_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.patient_meals.delete_one({'id': meal_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Meal record not found")
+    return {"message": "Meal record deleted"}
+
 # ==================== EXPENSE MANAGEMENT ====================
 
 @api_router.post("/expenses")
