@@ -157,9 +157,13 @@ export default function PatientDetails() {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="page-title">{patient.name}</h1>
+          <div className="flex items-center gap-3">
+            {patient.pid && <span className="font-mono text-sm font-semibold text-[#3A5A40] bg-[#3A5A40]/10 px-2 py-1 rounded-md">{patient.pid}</span>}
+            <h1 className="page-title">{patient.name}</h1>
+          </div>
           <p className="page-subtitle">
-            {patient.age} years, {patient.gender} • {patient.prakriti || 'Prakriti not specified'}
+            {patient.age} years, {patient.gender} • {patient.prakriti ? patient.prakriti.charAt(0).toUpperCase() + patient.prakriti.slice(1) : 'Prakriti not specified'}
+            {patient.blood_group ? ` • ${patient.blood_group}` : ''}
           </p>
         </div>
         <Dialog open={prescriptionDialogOpen} onOpenChange={setPrescriptionDialogOpen}>
@@ -561,39 +565,111 @@ export default function PatientDetails() {
               <CardTitle style={{ fontFamily: 'Playfair Display' }}>Patient Information</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-xs text-[#6B7280] uppercase">Full Name</Label>
-                    <p className="font-medium">{patient.name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-[#6B7280] uppercase">Age / Gender</Label>
-                    <p className="font-medium">{patient.age} years / {patient.gender}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-[#6B7280] uppercase">Phone</Label>
-                    <p className="font-medium">{patient.phone}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs text-[#6B7280] uppercase">Address</Label>
-                    <p className="font-medium">{patient.address}</p>
+              <div className="space-y-8">
+                {/* Basic Information */}
+                <div>
+                  <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-4">Basic Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">PID</Label>
+                      <p className="font-mono font-semibold text-[#3A5A40]">{patient.pid || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Full Name</Label>
+                      <p className="font-medium">{patient.name}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Phone</Label>
+                      <p className="font-medium">{patient.phone}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Email</Label>
+                      <p className="font-medium">{patient.email || 'N/A'}</p>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-xs text-[#6B7280] uppercase">Prakriti (Body Constitution)</Label>
-                    <p className="font-medium capitalize">{patient.prakriti || 'Not specified'}</p>
+
+                {/* Demographics */}
+                <div>
+                  <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-4">Demographics</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Age / Gender</Label>
+                      <p className="font-medium">{patient.age} years / {patient.gender}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Date of Birth</Label>
+                      <p className="font-medium">{patient.dob || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Blood Group</Label>
+                      <p className="font-medium">{patient.blood_group || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Marital Status</Label>
+                      <p className="font-medium capitalize">{patient.marital_status || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Occupation</Label>
+                      <p className="font-medium">{patient.occupation || 'N/A'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs text-[#6B7280] uppercase">Current Status</Label>
-                    <p className="font-medium capitalize">{patient.status}</p>
+                </div>
+
+                {/* Ayurveda Profile */}
+                <div>
+                  <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-4">Ayurveda Profile</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Prakriti (Body Constitution)</Label>
+                      <p className="font-medium capitalize">{patient.prakriti || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Lifestyle</Label>
+                      <p className="font-medium capitalize">{patient.lifestyle || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Referral Source</Label>
+                      <p className="font-medium">{patient.referral_source || 'N/A'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-xs text-[#6B7280] uppercase">Patient Type</Label>
-                    <p className="font-medium">{patient.patient_type !== 'None' ? patient.patient_type : 'Not admitted'}</p>
+                </div>
+
+                {/* Contact & Emergency */}
+                <div>
+                  <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-4">Contact & Emergency</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Address</Label>
+                      <p className="font-medium">{patient.address}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Emergency Contact</Label>
+                      <p className="font-medium">
+                        {patient.emergency_contact_name ? `${patient.emergency_contact_name} (${patient.emergency_contact_phone || 'N/A'})` : 'N/A'}
+                      </p>
+                    </div>
                   </div>
-                  <div>
+                </div>
+
+                {/* Medical & Status */}
+                <div>
+                  <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-4">Medical & Status</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Current Status</Label>
+                      <p className="font-medium capitalize">{patient.status}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Patient Type</Label>
+                      <p className="font-medium">{patient.patient_type !== 'None' ? patient.patient_type : 'Not admitted'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-[#6B7280] uppercase">Priority</Label>
+                      <p className="font-medium capitalize">{patient.priority || 'Normal'}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
                     <Label className="text-xs text-[#6B7280] uppercase">Medical History</Label>
                     <p className="font-medium">{patient.medical_history || 'None recorded'}</p>
                   </div>

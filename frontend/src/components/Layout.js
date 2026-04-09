@@ -12,7 +12,8 @@ import {
   X,
   UserCog,
   ShieldCheck,
-  UtensilsCrossed
+  UtensilsCrossed,
+  ListOrdered
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ const RESTRICTED_ROLES = ['doctor', 'front_desk', 'therapist'];
 const allNavItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, restricted: false },
   { path: '/patients', label: 'Patients', icon: Users, restricted: false },
+  { path: '/queue', label: 'Live Queue', icon: ListOrdered, restricted: false },
   { path: '/inventory', label: 'Inventory', icon: Package, restricted: false },
   { path: '/appointments', label: 'Appointments', icon: Calendar, restricted: false },
   { path: '/billing', label: 'Billing', icon: Receipt, restricted: false },

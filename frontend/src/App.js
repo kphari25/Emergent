@@ -12,6 +12,7 @@ import Billing from "@/pages/Billing";
 import Reports from "@/pages/Reports";
 import HR from "@/pages/HR";
 import Mess from "@/pages/Mess";
+import QueueDashboard from "@/pages/QueueDashboard";
 import UserManagement from "@/pages/UserManagement";
 import Layout from "@/components/Layout";
 
@@ -97,6 +98,7 @@ function App() {
                     <Route index element={<Dashboard />} />
                     <Route path="patients" element={<Patients />} />
                     <Route path="patients/:patientId" element={<PatientDetails />} />
+                    <Route path="queue" element={<QueueDashboard />} />
                     <Route path="inventory" element={<Inventory />} />
                     <Route path="appointments" element={<Appointments />} />
                     <Route path="billing" element={<Billing />} />

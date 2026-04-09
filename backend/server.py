@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ReturnDocument
 import os
 import logging
 from pathlib import Path
@@ -61,10 +62,20 @@ class PatientCreate(BaseModel):
     phone: str
     address: str
     medical_history: Optional[str] = ""
-    prakriti: Optional[str] = ""  # Ayurvedic body constitution
+    prakriti: Optional[str] = ""
+    dob: Optional[str] = ""
+    email: Optional[str] = ""
+    blood_group: Optional[str] = ""
+    occupation: Optional[str] = ""
+    marital_status: Optional[str] = ""
+    emergency_contact_name: Optional[str] = ""
+    emergency_contact_phone: Optional[str] = ""
+    lifestyle: Optional[str] = ""
+    referral_source: Optional[str] = ""
 
 class PatientResponse(BaseModel):
     id: str
+    pid: Optional[str] = None
     name: str
     age: int
     gender: str
@@ -72,11 +83,22 @@ class PatientResponse(BaseModel):
     address: str
     medical_history: str
     prakriti: str
-    status: str  # active, discharged
-    patient_type: str  # IP, OP, None
+    dob: Optional[str] = ""
+    email: Optional[str] = ""
+    blood_group: Optional[str] = ""
+    occupation: Optional[str] = ""
+    marital_status: Optional[str] = ""
+    emergency_contact_name: Optional[str] = ""
+    emergency_contact_phone: Optional[str] = ""
+    lifestyle: Optional[str] = ""
+    referral_source: Optional[str] = ""
+    status: str
+    patient_type: str
     room_number: Optional[str] = None
     token_number: Optional[int] = None
     admission_date: Optional[str] = None
+    priority: Optional[str] = "normal"
+    queue_status: Optional[str] = None
     created_at: str
 
 class CheckInRequest(BaseModel):
@@ -85,6 +107,7 @@ class CheckInRequest(BaseModel):
     room_number: Optional[str] = None
     doctor_id: Optional[str] = None
     reason: str
+    priority: Optional[str] = "normal"  # normal, elderly, emergency
 
 class InventoryItemCreate(BaseModel):
     name: str
@@ -438,11 +461,27 @@ async def get_available_roles(current_user: dict = Depends(get_current_user)):
 
 # ==================== PATIENT ROUTES ====================
 
+async def generate_pid():
+    result = await db.counters.find_one_and_update(
+        {'type': 'patient_pid'},
+        {'$inc': {'value': 1}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER
+    )
+    return f"TAH-{result['value']:04d}"
+
 @api_router.post("/patients", response_model=PatientResponse)
 async def create_patient(patient: PatientCreate, current_user: dict = Depends(get_current_user)):
+    # Check for duplicate phone
+    existing = await db.patients.find_one({'phone': patient.phone, 'status': {'$ne': 'deleted'}}, {'_id': 0})
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Patient with phone {patient.phone} already exists (PID: {existing.get('pid', 'N/A')})")
+    
     patient_id = str(uuid.uuid4())
+    pid = await generate_pid()
     patient_doc = {
         'id': patient_id,
+        'pid': pid,
         'name': patient.name,
         'age': patient.age,
         'gender': patient.gender,
@@ -450,15 +489,26 @@ async def create_patient(patient: PatientCreate, current_user: dict = Depends(ge
         'address': patient.address,
         'medical_history': patient.medical_history or "",
         'prakriti': patient.prakriti or "",
+        'dob': patient.dob or "",
+        'email': patient.email or "",
+        'blood_group': patient.blood_group or "",
+        'occupation': patient.occupation or "",
+        'marital_status': patient.marital_status or "",
+        'emergency_contact_name': patient.emergency_contact_name or "",
+        'emergency_contact_phone': patient.emergency_contact_phone or "",
+        'lifestyle': patient.lifestyle or "",
+        'referral_source': patient.referral_source or "",
         'status': 'active',
         'patient_type': 'None',
         'room_number': None,
         'token_number': None,
         'admission_date': None,
+        'priority': 'normal',
+        'queue_status': None,
         'created_at': datetime.now(timezone.utc).isoformat()
     }
     await db.patients.insert_one(patient_doc)
-    return patient_doc
+    return await db.patients.find_one({'id': patient_id}, {'_id': 0})
 
 @api_router.get("/patients", response_model=List[PatientResponse])
 async def get_patients(patient_type: Optional[str] = None, current_user: dict = Depends(get_current_user)):
@@ -466,6 +516,14 @@ async def get_patients(patient_type: Optional[str] = None, current_user: dict = 
     if patient_type and patient_type != 'all':
         query['patient_type'] = patient_type
     patients = await db.patients.find(query, {'_id': 0}).to_list(1000)
+    return patients
+
+@api_router.get("/patients/search-phone")
+async def search_patient_by_phone(phone: str, current_user: dict = Depends(get_current_user)):
+    patients = await db.patients.find(
+        {'phone': {'$regex': phone}},
+        {'_id': 0}
+    ).to_list(20)
     return patients
 
 @api_router.get("/patients/template")
@@ -503,7 +561,9 @@ async def patient_checkin(request: CheckInRequest, current_user: dict = Depends(
     update_data = {
         'patient_type': request.patient_type,
         'status': 'active',
-        'admission_date': datetime.now(timezone.utc).isoformat()
+        'admission_date': datetime.now(timezone.utc).isoformat(),
+        'priority': request.priority or 'normal',
+        'queue_status': 'waiting'
     }
     
     if request.patient_type == 'IP':
@@ -530,10 +590,13 @@ async def patient_checkin(request: CheckInRequest, current_user: dict = Depends(
     checkin_record = {
         'id': str(uuid.uuid4()),
         'patient_id': request.patient_id,
+        'patient_name': patient.get('name', ''),
         'patient_type': request.patient_type,
         'doctor_id': request.doctor_id,
         'reason': request.reason,
         'room_number': request.room_number,
+        'priority': request.priority or 'normal',
+        'queue_status': 'waiting',
         'checkin_time': datetime.now(timezone.utc).isoformat(),
         'checkout_time': None
     }
@@ -558,18 +621,88 @@ async def patient_checkout(patient_id: str, current_user: dict = Depends(get_cur
     # Update checkin history
     await db.checkin_history.update_one(
         {'patient_id': patient_id, 'checkout_time': None},
-        {'$set': {'checkout_time': datetime.now(timezone.utc).isoformat()}}
+        {'$set': {'checkout_time': datetime.now(timezone.utc).isoformat(), 'queue_status': 'completed'}}
     )
     
     update_data = {
         'patient_type': 'None',
         'status': 'discharged',
         'room_number': None,
-        'token_number': None
+        'token_number': None,
+        'queue_status': 'completed',
+        'priority': 'normal'
     }
     await db.patients.update_one({'id': patient_id}, {'$set': update_data})
     updated = await db.patients.find_one({'id': patient_id}, {'_id': 0})
     return updated
+
+# ==================== QUEUE MANAGEMENT ====================
+
+@api_router.get("/queue")
+async def get_queue(current_user: dict = Depends(get_current_user)):
+    """Get today's live queue - patients checked in today with queue statuses"""
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0).isoformat()
+    
+    # Get all checkins for today that haven't been fully processed
+    checkins = await db.checkin_history.find(
+        {'checkin_time': {'$gte': today_start}},
+        {'_id': 0}
+    ).sort('checkin_time', 1).to_list(500)
+    
+    # Enrich with patient details
+    queue_items = []
+    for c in checkins:
+        patient = await db.patients.find_one({'id': c['patient_id']}, {'_id': 0})
+        if patient:
+            queue_items.append({
+                'checkin_id': c['id'],
+                'patient_id': c['patient_id'],
+                'patient_name': patient.get('name', c.get('patient_name', '')),
+                'pid': patient.get('pid', ''),
+                'patient_type': c.get('patient_type', ''),
+                'doctor_id': c.get('doctor_id', ''),
+                'reason': c.get('reason', ''),
+                'room_number': c.get('room_number', ''),
+                'priority': c.get('priority', patient.get('priority', 'normal')),
+                'queue_status': c.get('queue_status', patient.get('queue_status', 'waiting')),
+                'token_number': patient.get('token_number'),
+                'checkin_time': c.get('checkin_time', ''),
+                'checkout_time': c.get('checkout_time')
+            })
+    
+    # Sort: emergency first, then elderly, then by checkin time
+    priority_order = {'emergency': 0, 'elderly': 1, 'normal': 2}
+    queue_items.sort(key=lambda x: (priority_order.get(x['priority'], 2), x['checkin_time']))
+    
+    return queue_items
+
+@api_router.put("/queue/{patient_id}/status")
+async def update_queue_status(patient_id: str, status: str, current_user: dict = Depends(get_current_user)):
+    """Update patient queue status: waiting, in_consultation, completed"""
+    if status not in ['waiting', 'in_consultation', 'completed']:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    await db.patients.update_one({'id': patient_id}, {'$set': {'queue_status': status}})
+    await db.checkin_history.update_one(
+        {'patient_id': patient_id, 'checkout_time': None},
+        {'$set': {'queue_status': status}}
+    )
+    
+    return {"message": f"Queue status updated to {status}"}
+
+@api_router.put("/queue/{patient_id}/priority")
+async def update_patient_priority(patient_id: str, priority: str, current_user: dict = Depends(get_current_user)):
+    """Update patient priority: normal, elderly, emergency"""
+    if priority not in ['normal', 'elderly', 'emergency']:
+        raise HTTPException(status_code=400, detail="Invalid priority")
+    
+    await db.patients.update_one({'id': patient_id}, {'$set': {'priority': priority}})
+    await db.checkin_history.update_one(
+        {'patient_id': patient_id, 'checkout_time': None},
+        {'$set': {'priority': priority}}
+    )
+    
+    return {"message": f"Priority updated to {priority}"}
 
 # ==================== INVENTORY ROUTES ====================
 
