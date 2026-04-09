@@ -13,6 +13,7 @@ import Reports from "@/pages/Reports";
 import HR from "@/pages/HR";
 import Mess from "@/pages/Mess";
 import QueueDashboard from "@/pages/QueueDashboard";
+import RoomManagement from "@/pages/RoomManagement";
 import UserManagement from "@/pages/UserManagement";
 import Layout from "@/components/Layout";
 
@@ -101,6 +102,7 @@ function App() {
                     <Route path="queue" element={<QueueDashboard />} />
                     <Route path="inventory" element={<Inventory />} />
                     <Route path="appointments" element={<Appointments />} />
+                    <Route path="rooms" element={<RoomManagement />} />
                     <Route path="billing" element={<Billing />} />
                     <Route path="mess" element={<Mess />} />
                     <Route path="reports" element={<RestrictedRoute><Reports /></RestrictedRoute>} />

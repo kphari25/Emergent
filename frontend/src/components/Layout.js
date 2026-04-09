@@ -13,7 +13,8 @@ import {
   UserCog,
   ShieldCheck,
   UtensilsCrossed,
-  ListOrdered
+  ListOrdered,
+  Bed
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ const allNavItems = [
   { path: '/queue', label: 'Live Queue', icon: ListOrdered, restricted: false },
   { path: '/inventory', label: 'Inventory', icon: Package, restricted: false },
   { path: '/appointments', label: 'Appointments', icon: Calendar, restricted: false },
+  { path: '/rooms', label: 'Rooms', icon: Bed, restricted: false },
   { path: '/billing', label: 'Billing', icon: Receipt, restricted: false },
   { path: '/mess', label: 'Mess', icon: UtensilsCrossed, restricted: false },
   { path: '/hr', label: 'HR', icon: UserCog, restricted: true },

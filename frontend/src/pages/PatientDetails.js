@@ -13,8 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { 
   ArrowLeft, User, Pill, Calendar, Receipt, FileText, Plus, 
-  Clock, Stethoscope, Package, IndianRupee, Trash2, History
+  Clock, Stethoscope, Package, IndianRupee, Trash2, History, Bed, LogIn
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -27,8 +28,11 @@ export default function PatientDetails() {
   const [report, setReport] = useState(null);
   const [inventory, setInventory] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
+  const [admitDialogOpen, setAdmitDialogOpen] = useState(false);
 
   const [newPrescription, setNewPrescription] = useState({
     diagnosis: '',
@@ -45,21 +49,30 @@ export default function PatientDetails() {
     duration: ''
   });
 
+  const [admitData, setAdmitData] = useState({
+    room_number: '', attender_name: '', attender_relation: '', attender_phone: '',
+    advance_amount: '0', consent_given: false, package_id: '', notes: ''
+  });
+
   useEffect(() => {
     fetchData();
   }, [patientId]);
 
   const fetchData = async () => {
     try {
-      const [reportRes, inventoryRes, doctorsRes] = await Promise.all([
+      const [reportRes, inventoryRes, doctorsRes, roomsRes, pkgRes] = await Promise.all([
         axios.get(`${API_URL}/patients/${patientId}/report`, { headers: getAuthHeaders() }),
         axios.get(`${API_URL}/inventory`, { headers: getAuthHeaders() }),
-        axios.get(`${API_URL}/doctors`, { headers: getAuthHeaders() })
+        axios.get(`${API_URL}/doctors`, { headers: getAuthHeaders() }),
+        axios.get(`${API_URL}/rooms/available`, { headers: getAuthHeaders() }),
+        axios.get(`${API_URL}/treatment-packages`, { headers: getAuthHeaders() })
       ]);
       setReport(reportRes.data);
       setPatient(reportRes.data.patient);
       setInventory(inventoryRes.data);
       setDoctors(doctorsRes.data);
+      setRooms(roomsRes.data);
+      setPackages(pkgRes.data);
     } catch (error) {
       toast.error('Failed to load patient data');
       navigate('/patients');
@@ -125,6 +138,32 @@ export default function PatientDetails() {
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to create prescription');
+    }
+  };
+
+  const handleAdmitAsIP = async (e) => {
+    e.preventDefault();
+    if (!admitData.room_number) {
+      toast.error('Please select a room');
+      return;
+    }
+    try {
+      await axios.post(`${API_URL}/patients/${patientId}/convert-to-ip`, {
+        room_number: admitData.room_number,
+        attender_name: admitData.attender_name,
+        attender_relation: admitData.attender_relation,
+        attender_phone: admitData.attender_phone,
+        advance_amount: parseFloat(admitData.advance_amount || 0),
+        consent_given: admitData.consent_given,
+        package_id: admitData.package_id || null,
+        notes: admitData.notes
+      }, { headers: getAuthHeaders() });
+      toast.success('Patient admitted as In-Patient');
+      setAdmitDialogOpen(false);
+      setAdmitData({ room_number: '', attender_name: '', attender_relation: '', attender_phone: '', advance_amount: '0', consent_given: false, package_id: '', notes: '' });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to admit patient');
     }
   };
 
@@ -320,6 +359,18 @@ export default function PatientDetails() {
             </form>
           </DialogContent>
         </Dialog>
+        {/* Admit as IP button - only for OP or non-admitted patients */}
+        {(patient.patient_type === 'OP' || patient.patient_type === 'None') && patient.status !== 'IP' && (
+          <Button
+            variant="outline"
+            className="rounded-full border-[#588157] text-[#588157] hover:bg-[#588157]/10"
+            onClick={() => setAdmitDialogOpen(true)}
+            data-testid="admit-ip-btn"
+          >
+            <Bed className="w-5 h-5 mr-2" />
+            Admit as IP
+          </Button>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -679,6 +730,106 @@ export default function PatientDetails() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Admit as IP Dialog */}
+      <Dialog open={admitDialogOpen} onOpenChange={setAdmitDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: 'Playfair Display' }}>Admit as In-Patient</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAdmitAsIP} className="space-y-4 mt-4">
+            <div className="p-4 bg-[#DAD7CD]/20 rounded-xl">
+              <p className="font-medium">{patient?.pid && <span className="text-[#3A5A40] mr-2">{patient.pid}</span>}{patient?.name}</p>
+              <p className="text-sm text-[#6B7280]">{patient?.age} years, {patient?.gender}</p>
+            </div>
+
+            {/* Room Selection */}
+            <div className="space-y-2">
+              <Label>Select Room *</Label>
+              <Select value={admitData.room_number} onValueChange={v => setAdmitData({ ...admitData, room_number: v })}>
+                <SelectTrigger className="rounded-xl" data-testid="admit-room-select"><SelectValue placeholder="Choose a room" /></SelectTrigger>
+                <SelectContent>
+                  {rooms.map(r => (
+                    <SelectItem key={r.id} value={r.room_number}>
+                      Room {r.room_number} - {r.room_type} ({r.floor}) - ₹{r.daily_rate}/day
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Treatment Package */}
+            <div className="space-y-2">
+              <Label>Treatment Package (Optional)</Label>
+              <Select value={admitData.package_id} onValueChange={v => setAdmitData({ ...admitData, package_id: v })}>
+                <SelectTrigger className="rounded-xl" data-testid="admit-package-select"><SelectValue placeholder="Select a package" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Package</SelectItem>
+                  {packages.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name} ({p.duration_days} days) - ₹{p.total_cost.toLocaleString()}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Attender Details */}
+            <div>
+              <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-3">Attender / Guardian Details</h3>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input value={admitData.attender_name} onChange={e => setAdmitData({ ...admitData, attender_name: e.target.value })} className="rounded-xl" data-testid="attender-name-input" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Relation</Label>
+                  <Select value={admitData.attender_relation} onValueChange={v => setAdmitData({ ...admitData, attender_relation: v })}>
+                    <SelectTrigger className="rounded-xl" data-testid="attender-relation-select"><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="spouse">Spouse</SelectItem>
+                      <SelectItem value="parent">Parent</SelectItem>
+                      <SelectItem value="child">Child</SelectItem>
+                      <SelectItem value="sibling">Sibling</SelectItem>
+                      <SelectItem value="relative">Relative</SelectItem>
+                      <SelectItem value="friend">Friend</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone</Label>
+                  <Input value={admitData.attender_phone} onChange={e => setAdmitData({ ...admitData, attender_phone: e.target.value })} className="rounded-xl" data-testid="attender-phone-input" />
+                </div>
+              </div>
+            </div>
+
+            {/* Advance Payment */}
+            <div className="space-y-2">
+              <Label>Advance Payment (INR)</Label>
+              <Input type="number" value={admitData.advance_amount} onChange={e => setAdmitData({ ...admitData, advance_amount: e.target.value })} className="rounded-xl" data-testid="advance-amount-input" />
+            </div>
+
+            {/* Consent */}
+            <div className="flex items-center gap-3 p-3 rounded-xl border border-[#E2E8F0]">
+              <Checkbox
+                id="consent"
+                checked={admitData.consent_given}
+                onCheckedChange={checked => setAdmitData({ ...admitData, consent_given: checked })}
+                data-testid="consent-checkbox"
+              />
+              <label htmlFor="consent" className="cursor-pointer text-sm font-medium">Patient / Attender gives consent for treatment and admission</label>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Notes (Optional)</Label>
+              <Textarea value={admitData.notes} onChange={e => setAdmitData({ ...admitData, notes: e.target.value })} className="rounded-xl" placeholder="Any special instructions or notes" />
+            </div>
+
+            <Button type="submit" className="w-full bg-[#588157] hover:bg-[#3A5A40] rounded-full" data-testid="submit-admit-btn">
+              <Bed className="w-5 h-5 mr-2" /> Confirm Admission
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

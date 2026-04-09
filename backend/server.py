@@ -242,16 +242,42 @@ class PrescriptionResponse(BaseModel):
 
 class RoomCreate(BaseModel):
     room_number: str
-    room_type: str  # general, private, icu
+    room_type: str  # general, private, semi_private, icu, deluxe
+    floor: str = "Ground"
     daily_rate: float
+    description: Optional[str] = ""
 
 class RoomResponse(BaseModel):
     id: str
     room_number: str
     room_type: str
+    floor: str = "Ground"
     daily_rate: float
     is_occupied: bool
     patient_id: Optional[str] = None
+    patient_name: Optional[str] = None
+    description: Optional[str] = ""
+
+class TreatmentPackageCreate(BaseModel):
+    name: str
+    duration_days: int
+    therapies: List[str] = []
+    description: Optional[str] = ""
+    room_type: str = "general"
+    total_cost: float
+    includes_room: bool = True
+    includes_food: bool = True
+    includes_medicines: bool = False
+
+class ConvertToIPRequest(BaseModel):
+    room_number: str
+    attender_name: Optional[str] = ""
+    attender_relation: Optional[str] = ""
+    attender_phone: Optional[str] = ""
+    advance_amount: float = 0
+    consent_given: bool = False
+    package_id: Optional[str] = None
+    notes: Optional[str] = ""
 
 # ==================== AUTH HELPERS ====================
 
@@ -1385,7 +1411,7 @@ async def record_payment(payment: PaymentRequest, current_user: dict = Depends(g
 
 # ==================== ROOM ROUTES ====================
 
-@api_router.post("/rooms", response_model=RoomResponse)
+@api_router.post("/rooms")
 async def create_room(room: RoomCreate, current_user: dict = Depends(get_current_user)):
     existing = await db.rooms.find_one({'room_number': room.room_number})
     if existing:
@@ -1396,22 +1422,234 @@ async def create_room(room: RoomCreate, current_user: dict = Depends(get_current
         'id': room_id,
         'room_number': room.room_number,
         'room_type': room.room_type,
+        'floor': room.floor or "Ground",
         'daily_rate': room.daily_rate,
+        'description': room.description or "",
         'is_occupied': False,
-        'patient_id': None
+        'patient_id': None,
+        'patient_name': None
     }
     await db.rooms.insert_one(room_doc)
-    return room_doc
+    return await db.rooms.find_one({'id': room_id}, {'_id': 0})
 
-@api_router.get("/rooms", response_model=List[RoomResponse])
+@api_router.get("/rooms")
 async def get_rooms(current_user: dict = Depends(get_current_user)):
     rooms = await db.rooms.find({}, {'_id': 0}).to_list(100)
+    # Enrich with patient names
+    for room in rooms:
+        if room.get('patient_id'):
+            patient = await db.patients.find_one({'id': room['patient_id']}, {'_id': 0, 'name': 1, 'pid': 1})
+            room['patient_name'] = patient.get('name', '') if patient else ''
+            room['patient_pid'] = patient.get('pid', '') if patient else ''
     return rooms
 
-@api_router.get("/rooms/available", response_model=List[RoomResponse])
+@api_router.get("/rooms/available")
 async def get_available_rooms(current_user: dict = Depends(get_current_user)):
     rooms = await db.rooms.find({'is_occupied': False}, {'_id': 0}).to_list(100)
     return rooms
+
+@api_router.put("/rooms/{room_id}")
+async def update_room(room_id: str, room: RoomCreate, current_user: dict = Depends(get_current_user)):
+    existing = await db.rooms.find_one({'id': room_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Room not found")
+    await db.rooms.update_one({'id': room_id}, {'$set': {
+        'room_number': room.room_number,
+        'room_type': room.room_type,
+        'floor': room.floor or "Ground",
+        'daily_rate': room.daily_rate,
+        'description': room.description or ""
+    }})
+    return await db.rooms.find_one({'id': room_id}, {'_id': 0})
+
+@api_router.delete("/rooms/{room_id}")
+async def delete_room(room_id: str, current_user: dict = Depends(get_current_user)):
+    room = await db.rooms.find_one({'id': room_id})
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    if room.get('is_occupied'):
+        raise HTTPException(status_code=400, detail="Cannot delete an occupied room")
+    await db.rooms.delete_one({'id': room_id})
+    return {"message": "Room deleted"}
+
+@api_router.get("/rooms/overview")
+async def get_rooms_overview(current_user: dict = Depends(get_current_user)):
+    """Floor-wise room overview with occupancy stats"""
+    rooms = await db.rooms.find({}, {'_id': 0}).to_list(200)
+    for room in rooms:
+        if room.get('patient_id'):
+            patient = await db.patients.find_one({'id': room['patient_id']}, {'_id': 0, 'name': 1, 'pid': 1})
+            room['patient_name'] = patient.get('name', '') if patient else ''
+            room['patient_pid'] = patient.get('pid', '') if patient else ''
+    
+    floors = {}
+    for r in rooms:
+        floor = r.get('floor', 'Ground')
+        if floor not in floors:
+            floors[floor] = []
+        floors[floor].append(r)
+    
+    total = len(rooms)
+    occupied = sum(1 for r in rooms if r.get('is_occupied'))
+    
+    return {
+        'total_rooms': total,
+        'occupied': occupied,
+        'available': total - occupied,
+        'occupancy_rate': round((occupied / total * 100) if total > 0 else 0, 1),
+        'by_floor': floors,
+        'by_type': {
+            rt: {
+                'total': sum(1 for r in rooms if r.get('room_type') == rt),
+                'occupied': sum(1 for r in rooms if r.get('room_type') == rt and r.get('is_occupied'))
+            }
+            for rt in set(r.get('room_type', 'general') for r in rooms)
+        }
+    }
+
+# ==================== OP TO IP CONVERSION ====================
+
+@api_router.post("/patients/{patient_id}/convert-to-ip")
+async def convert_op_to_ip(patient_id: str, req: ConvertToIPRequest, current_user: dict = Depends(get_current_user)):
+    patient = await db.patients.find_one({'id': patient_id})
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Check room availability
+    room = await db.rooms.find_one({'room_number': req.room_number})
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    if room.get('is_occupied'):
+        raise HTTPException(status_code=400, detail="Room is already occupied")
+    
+    # Update room
+    await db.rooms.update_one(
+        {'room_number': req.room_number},
+        {'$set': {'is_occupied': True, 'patient_id': patient_id, 'patient_name': patient.get('name', '')}}
+    )
+    
+    # Update patient
+    update_data = {
+        'patient_type': 'IP',
+        'room_number': req.room_number,
+        'admission_date': datetime.now(timezone.utc).isoformat(),
+        'status': 'active'
+    }
+    await db.patients.update_one({'id': patient_id}, {'$set': update_data})
+    
+    # Store admission record with consent/attender details
+    admission_record = {
+        'id': str(uuid.uuid4()),
+        'patient_id': patient_id,
+        'patient_name': patient.get('name', ''),
+        'patient_pid': patient.get('pid', ''),
+        'room_number': req.room_number,
+        'room_type': room.get('room_type', ''),
+        'daily_rate': room.get('daily_rate', 0),
+        'attender_name': req.attender_name or "",
+        'attender_relation': req.attender_relation or "",
+        'attender_phone': req.attender_phone or "",
+        'advance_amount': req.advance_amount,
+        'consent_given': req.consent_given,
+        'package_id': req.package_id,
+        'notes': req.notes or "",
+        'admitted_by': current_user['id'],
+        'admission_date': datetime.now(timezone.utc).isoformat(),
+        'discharge_date': None,
+        'status': 'active'
+    }
+    
+    # If package selected, link it
+    if req.package_id:
+        package = await db.treatment_packages.find_one({'id': req.package_id}, {'_id': 0})
+        if package:
+            admission_record['package_name'] = package.get('name', '')
+            admission_record['package_cost'] = package.get('total_cost', 0)
+    
+    await db.admissions.insert_one(admission_record)
+    
+    # Track advance payment if any
+    if req.advance_amount > 0:
+        advance_doc = {
+            'id': str(uuid.uuid4()),
+            'patient_id': patient_id,
+            'admission_id': admission_record['id'],
+            'amount': req.advance_amount,
+            'payment_date': datetime.now(timezone.utc).isoformat(),
+            'recorded_by': current_user['id'],
+            'type': 'advance'
+        }
+        await db.advance_payments.insert_one(advance_doc)
+    
+    return await db.patients.find_one({'id': patient_id}, {'_id': 0})
+
+@api_router.get("/admissions")
+async def get_admissions(status: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if status:
+        query['status'] = status
+    admissions = await db.admissions.find(query, {'_id': 0}).sort('admission_date', -1).to_list(500)
+    return admissions
+
+@api_router.get("/admissions/patient/{patient_id}")
+async def get_patient_admissions(patient_id: str, current_user: dict = Depends(get_current_user)):
+    admissions = await db.admissions.find({'patient_id': patient_id}, {'_id': 0}).sort('admission_date', -1).to_list(100)
+    return admissions
+
+@api_router.get("/advance-payments/{patient_id}")
+async def get_advance_payments(patient_id: str, current_user: dict = Depends(get_current_user)):
+    payments = await db.advance_payments.find({'patient_id': patient_id}, {'_id': 0}).sort('payment_date', -1).to_list(100)
+    return payments
+
+# ==================== TREATMENT PACKAGES ====================
+
+@api_router.post("/treatment-packages")
+async def create_treatment_package(pkg: TreatmentPackageCreate, current_user: dict = Depends(require_admin)):
+    pkg_id = str(uuid.uuid4())
+    pkg_doc = {
+        'id': pkg_id,
+        'name': pkg.name,
+        'duration_days': pkg.duration_days,
+        'therapies': pkg.therapies,
+        'description': pkg.description or "",
+        'room_type': pkg.room_type,
+        'total_cost': pkg.total_cost,
+        'includes_room': pkg.includes_room,
+        'includes_food': pkg.includes_food,
+        'includes_medicines': pkg.includes_medicines,
+        'status': 'active',
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.treatment_packages.insert_one(pkg_doc)
+    return await db.treatment_packages.find_one({'id': pkg_id}, {'_id': 0})
+
+@api_router.get("/treatment-packages")
+async def get_treatment_packages(current_user: dict = Depends(get_current_user)):
+    packages = await db.treatment_packages.find({'status': 'active'}, {'_id': 0}).to_list(100)
+    return packages
+
+@api_router.put("/treatment-packages/{pkg_id}")
+async def update_treatment_package(pkg_id: str, pkg: TreatmentPackageCreate, current_user: dict = Depends(require_admin)):
+    existing = await db.treatment_packages.find_one({'id': pkg_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Package not found")
+    await db.treatment_packages.update_one({'id': pkg_id}, {'$set': {
+        'name': pkg.name,
+        'duration_days': pkg.duration_days,
+        'therapies': pkg.therapies,
+        'description': pkg.description or "",
+        'room_type': pkg.room_type,
+        'total_cost': pkg.total_cost,
+        'includes_room': pkg.includes_room,
+        'includes_food': pkg.includes_food,
+        'includes_medicines': pkg.includes_medicines
+    }})
+    return await db.treatment_packages.find_one({'id': pkg_id}, {'_id': 0})
+
+@api_router.delete("/treatment-packages/{pkg_id}")
+async def delete_treatment_package(pkg_id: str, current_user: dict = Depends(require_admin)):
+    await db.treatment_packages.update_one({'id': pkg_id}, {'$set': {'status': 'inactive'}})
+    return {"message": "Package deactivated"}
 
 # ==================== REPORTS & ANALYTICS ====================
 
