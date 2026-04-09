@@ -13,6 +13,8 @@ Build a comprehensive Ayurvedic hospital management program with:
 - Data import from CSV/Excel for inventory and patients
 - Printable A4 invoices with hospital branding
 - Mess/Food management module for patients
+- Enhanced patient profiles with auto PID, phone lookup, Ayurveda-specific fields
+- Live Queue Dashboard with priority flagging
 
 ## Hospital Details
 - **Name**: Tatva Ayurved Hospital
@@ -25,7 +27,7 @@ Build a comprehensive Ayurvedic hospital management program with:
 - **Backend**: FastAPI (Python) with JWT authentication
 - **Database**: MongoDB
 
-## What's Been Implemented (Complete)
+## What's Been Implemented
 
 ### Phase 1 - Core MVP
 - User Authentication (JWT-based)
@@ -50,26 +52,32 @@ Build a comprehensive Ayurvedic hospital management program with:
 - Forgot Password flow (MOCKED)
 
 ### Phase 4 - Data Import & Inventory Edit
-- Removed Register button from login page
 - Inventory Import (CSV/Excel)
 - Patient Import (CSV/Excel)
 - Inventory Edit (full edit dialog)
 
 ### Phase 5 - Separate IP/OP Billing with GST
 - Two separate tabs: Out-Patient (OP) and In-Patient (IP)
-- Type filter dropdown to view OP/IP bills separately
 - GST (18%) toggle with printable A4 Tax Invoice
 - Hospital branding on invoices
 
 ### Phase 6 - HR Enhancements & Mess Module (Dec 2025)
-- **Edit Staff Details**: Edit button on each staff row opens prefilled dialog, save updates persist
-- **Leave Tracker**: New tab in HR with Record Leave dialog (staff selection, date, leave type, half-day with time fields, reason), leave table with delete, year-to-date summary cards
-- **Mess Module**: New sidebar page with:
-  - Meal price configuration (Breakfast, Lunch, Dinner, Snacks, Tea/Coffee)
-  - Patient meal assignment with dropdown and checkbox selection
-  - Auto cost calculation based on set prices
-  - Daily summary cards (patients fed, total cost, per-meal counts)
-  - Today's Meals and Meal Prices tabs
+- Edit Staff Details dialog in HR
+- Leave Tracker tab with Record Leave dialog (staff selection, date, type, half-day with time, reason)
+- Mess Module: Meal price config, patient meal assignment, daily summary
+
+### Phase 7 - Enhanced Patient Profiles & Live Queue (Dec 2025)
+- **Auto PID**: Unique Patient ID (TAH-0001, TAH-0002...) auto-generated on registration
+- **Phone Lookup**: Search returning patients by mobile number to prevent duplicates
+- **Extended Profiles**: DOB, Email, Blood Group, Occupation, Marital Status, Emergency Contact, Lifestyle
+- **Prakriti Dropdown**: Vata/Pitta/Kapha/dual/Tridosha selector
+- **Referral Tracking**: Lead source dropdown (Google, Word of Mouth, Doctor Referral, Social Media, Walk-in, etc.)
+- **Duplicate Prevention**: System blocks duplicate phone numbers with informative error
+- **Priority Flagging**: Tag patients as Normal/Elderly/Emergency during check-in
+- **Live Queue Dashboard**: Three-column kanban (Waiting → In Consultation → Completed)
+- **Queue Status Transitions**: One-click move between statuses
+- **Priority Sorting**: Emergency patients appear first in queue
+- **Auto-refresh**: Queue refreshes every 15 seconds
 
 ## Test Credentials
 | Role | Email | Password |
@@ -79,26 +87,35 @@ Build a comprehensive Ayurvedic hospital management program with:
 
 ## Key Files
 - `/app/backend/server.py` - All backend APIs
-- `/app/frontend/src/pages/HR.js` - HR management with staff, salary, leaves
-- `/app/frontend/src/pages/Mess.js` - Mess/food management module
+- `/app/frontend/src/pages/Patients.js` - Enhanced patient registration with phone lookup, PID
+- `/app/frontend/src/pages/QueueDashboard.js` - Live Queue Dashboard
+- `/app/frontend/src/pages/PatientDetails.js` - Extended patient info display
+- `/app/frontend/src/pages/HR.js` - HR with staff edit, salary, leaves
+- `/app/frontend/src/pages/Mess.js` - Mess/food management
 - `/app/frontend/src/pages/Billing.js` - IP/OP billing with GST & invoices
 - `/app/frontend/src/pages/Inventory.js` - Inventory management
-- `/app/frontend/src/pages/Patients.js` - Patient management
-- `/app/frontend/src/components/Layout.js` - Sidebar navigation with Mess
+- `/app/frontend/src/components/Layout.js` - Sidebar navigation
 
 ## MOCKED Features
 - **Password Reset Email**: Reset tokens are logged to server console.
 
 ## Prioritized Backlog
 
-### P1 (Important - Future)
+### P0 (User Requested - Next)
+- **REQ-3**: IP & Room Management (OP→IP conversion, bed management, digital consent, treatment packages)
+- **REQ-4**: Therapy Scheduling (Abhyanga/Shirodhara scheduler, resource conflict check, gender-based assignment, daily therapy calendar)
+- **REQ-5**: Billing & Pharmacy (consolidated billing, advance deposits, prescription→pharmacy bill, batch/expiry tracking, multi-mode payment)
+- **REQ-6**: Dashboards (user message was cut off)
+
+### P1 (Important)
+- Document Vault (upload ID proofs, medical reports) - needs object storage
 - Payroll reminders (notify admin when salary due)
 - Report export (PDF/Excel)
 - Low-stock alerts for inventory
 
-### P2 (Nice to Have)
+### P2 (Future)
+- SMS/WhatsApp automated reminders (needs Twilio)
 - Email integration for password reset
-- Email/SMS notifications
 - Patient portal
 - Multi-language support
 - Audit logs
