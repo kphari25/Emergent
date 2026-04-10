@@ -14,6 +14,8 @@ import HR from "@/pages/HR";
 import Mess from "@/pages/Mess";
 import QueueDashboard from "@/pages/QueueDashboard";
 import RoomManagement from "@/pages/RoomManagement";
+import LeadManagement from "@/pages/LeadManagement";
+import FeedbackPage from "@/pages/FeedbackPage";
 import UserManagement from "@/pages/UserManagement";
 import Layout from "@/components/Layout";
 
@@ -105,6 +107,8 @@ function App() {
                     <Route path="rooms" element={<RoomManagement />} />
                     <Route path="billing" element={<Billing />} />
                     <Route path="mess" element={<Mess />} />
+                    <Route path="leads" element={<LeadManagement />} />
+                    <Route path="feedback" element={<FeedbackPage />} />
                     <Route path="reports" element={<RestrictedRoute><Reports /></RestrictedRoute>} />
                     <Route path="hr" element={<RestrictedRoute><HR /></RestrictedRoute>} />
                     <Route path="users" element={<AdminRoute><UserManagement /></AdminRoute>} />

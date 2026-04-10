@@ -1,0 +1,146 @@
+{
+  "summary": "REQ-6: Dashboards & Communications - All 37 backend tests passed (100%). All frontend UI elements verified working. Executive Dashboard shows 6 metric cards + 7 widgets. Lead Management has full CRUD + status pipeline + conversion. Feedback has CRUD + auto-escalation + resolution.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "All dialogs (Lead, Feedback)",
+        "issues": ["Console warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent} - accessibility improvement recommended"]
+      }
+    ]
+  },
+  "passed_tests": [
+    "Backend: GET /api/reports/executive-dashboard returns 200",
+    "Backend: Executive dashboard has today stats (ip_checkins, op_checkins, revenue, collected, appointments)",
+    "Backend: Executive dashboard has active patients (ip_patients, op_patients, queue_waiting, queue_in_consultation)",
+    "Backend: Executive dashboard has monthly revenue (revenue, collected)",
+    "Backend: Executive dashboard has room occupancy (total, occupied, available, occupancy_rate)",
+    "Backend: Executive dashboard has doctor_performance list",
+    "Backend: Executive dashboard has lead stats (total, new)",
+    "Backend: POST /api/leads creates new lead with status=new",
+    "Backend: GET /api/leads returns list of leads",
+    "Backend: GET /api/leads?status=new filters by status",
+    "Backend: PUT /api/leads/{id} updates lead details",
+    "Backend: PUT /api/leads/{id} returns 404 for non-existent lead",
+    "Backend: PUT /api/leads/{id}/status?status=contacted changes status",
+    "Backend: PUT /api/leads/{id}/status?status=follow_up changes status",
+    "Backend: PUT /api/leads/{id}/status with invalid status returns 400",
+    "Backend: PUT /api/leads/{id}/status returns 404 for non-existent lead",
+    "Backend: POST /api/leads/{id}/convert creates patient with auto PID",
+    "Backend: Lead status changes to 'converted' after conversion",
+    "Backend: Patient created from lead has correct data (name, phone, email)",
+    "Backend: POST /api/leads/{id}/convert returns 400 for already converted lead",
+    "Backend: POST /api/leads/{id}/convert returns 404 for non-existent lead",
+    "Backend: DELETE /api/leads/{id} deletes lead",
+    "Backend: DELETE /api/leads/{id} returns 404 for non-existent lead",
+    "Backend: POST /api/feedback with rating >= 3 creates non-escalated feedback",
+    "Backend: GET /api/feedback returns list of feedback",
+    "Backend: GET /api/feedback/summary returns total, average_rating, escalations, unresolved",
+    "Backend: DELETE /api/feedback/{id} deletes feedback",
+    "Backend: DELETE /api/feedback/{id} returns 404 for non-existent feedback",
+    "Backend: POST /api/feedback with rating <= 2 auto-creates escalation",
+    "Backend: POST /api/feedback with rating = 2 creates escalation",
+    "Backend: GET /api/feedback?escalation_only=true returns only escalated feedback",
+    "Backend: PUT /api/feedback/{id}/resolve marks escalation as resolved",
+    "Backend: GET /api/feedback/summary counts escalations correctly",
+    "Frontend: Executive Dashboard page loads with all 6 metric cards",
+    "Frontend: Dashboard has Live Queue, Appointments, Active Patients widgets",
+    "Frontend: Dashboard has Patient Distribution chart (Recharts)",
+    "Frontend: Dashboard has Doctor Performance section",
+    "Frontend: Dashboard has Revenue Summary and Quick Stats",
+    "Frontend: Lead Management page loads with status filter cards (new, contacted, follow_up, converted, lost)",
+    "Frontend: Leads table shows lead data with status dropdown and action buttons",
+    "Frontend: Add Lead dialog has all fields (name, phone, email, source, inquiry_type, follow_up_date, notes)",
+    "Frontend: Lead status can be changed via dropdown",
+    "Frontend: Feedback page loads with summary cards (Total, Avg Rating, Escalations, Unresolved)",
+    "Frontend: Google Review CTA with Copy Link button present",
+    "Frontend: Feedback list shows items with escalation tags and Resolve button",
+    "Frontend: Add Feedback dialog has patient select, star rating, source, feedback text",
+    "Frontend: Escalation can be resolved with notes",
+    "Frontend: Escalations filter button toggles escalation-only view"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_req6_dashboard_leads_feedback.py",
+    "/app/test_reports/pytest/pytest_req6.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "DialogContent components missing aria-describedby for accessibility - add DialogDescription or aria-describedby prop (minor, non-blocking)",
+    "Google Review URL is placeholder (https://g.page/r/YOUR_GOOGLE_PLACE_ID/review) - user needs to replace with actual Google business link"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_req6_dashboard_leads_feedback.py"
+  ],
+  "success_rate": {
+    "backend": "100% (37/37 tests passed)",
+    "frontend": "100% (all UI elements working)"
+  },
+  "test_credentials": {
+    "admin": "admin@ayurcare.com / admin1234"
+  },
+  "seed_data_creation": "Test lead 'Priya M' (status: new, source: whatsapp) exists. Test feedback with rating 2 (escalated, now resolved) exists.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "REQ-6 Dashboards & Communications fully functional. Executive Dashboard API returns today/monthly stats, room occupancy, doctor performance, lead counts. Lead CRUD working with status pipeline (new→contacted→follow_up→converted→lost). Lead conversion creates patient with auto PID (TAH-XXXX format). Feedback CRUD working with auto-escalation for ratings ≤2. Escalation resolution working. Google Review URL is placeholder.",
+  "features_verified": {
+    "executive_dashboard": {
+      "status": "WORKING",
+      "details": {
+        "endpoint": "GET /api/reports/executive-dashboard",
+        "metrics": "today (ip/op checkins, revenue, appointments), active (ip/op patients, queue status), monthly (revenue, collected), rooms (occupancy), doctor_performance, leads (total, new)"
+      }
+    },
+    "lead_management": {
+      "status": "WORKING",
+      "details": {
+        "create": "POST /api/leads with name, phone, email, source, inquiry_type, notes, follow_up_date",
+        "read": "GET /api/leads, GET /api/leads?status={status}",
+        "update": "PUT /api/leads/{id}",
+        "delete": "DELETE /api/leads/{id}",
+        "status_pipeline": "PUT /api/leads/{id}/status?status={new|contacted|follow_up|converted|lost}",
+        "conversion": "POST /api/leads/{id}/convert creates patient with auto PID"
+      }
+    },
+    "feedback_management": {
+      "status": "WORKING",
+      "details": {
+        "create": "POST /api/feedback with patient_id, patient_name, rating, feedback_text, source",
+        "read": "GET /api/feedback, GET /api/feedback?escalation_only=true",
+        "summary": "GET /api/feedback/summary returns total, average_rating, escalations, unresolved",
+        "delete": "DELETE /api/feedback/{id}",
+        "auto_escalation": "Rating ≤ 2 automatically sets escalation=true",
+        "resolve": "PUT /api/feedback/{id}/resolve?notes={notes}"
+      }
+    },
+    "frontend_dashboard": {
+      "status": "WORKING",
+      "details": {
+        "metric_cards": "OP Today, IP Today, Today Revenue, Month Revenue, Room Occupancy, New Leads",
+        "widgets": "Live Queue, Appointments Today, Active Patients, Patient Distribution Chart, Doctor Performance, Revenue Summary, Quick Stats"
+      }
+    },
+    "frontend_leads": {
+      "status": "WORKING",
+      "details": {
+        "status_filters": "Clickable cards for new, contacted, follow_up, converted, lost",
+        "table": "Shows lead name, phone, source, inquiry, status, follow-up date, notes, actions",
+        "actions": "Status dropdown, Convert button, Edit button, Delete button",
+        "dialogs": "Add Lead and Edit Lead dialogs with all fields"
+      }
+    },
+    "frontend_feedback": {
+      "status": "WORKING",
+      "details": {
+        "summary_cards": "Total Feedback, Average Rating (with stars), Total Escalations, Unresolved",
+        "google_review_cta": "Copy Link button for Google Review URL",
+        "feedback_list": "Shows patient name, star rating, source, escalation tag, resolve button",
+        "dialogs": "Add Feedback dialog with patient select, star rating, source, feedback text"
+      }
+    }
+  }
+}

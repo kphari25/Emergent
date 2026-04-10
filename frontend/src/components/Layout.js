@@ -14,7 +14,9 @@ import {
   ShieldCheck,
   UtensilsCrossed,
   ListOrdered,
-  Bed
+  Bed,
+  UserPlus,
+  MessageSquare
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -31,6 +33,8 @@ const allNavItems = [
   { path: '/rooms', label: 'Rooms', icon: Bed, restricted: false },
   { path: '/billing', label: 'Billing', icon: Receipt, restricted: false },
   { path: '/mess', label: 'Mess', icon: UtensilsCrossed, restricted: false },
+  { path: '/leads', label: 'Leads', icon: UserPlus, restricted: false },
+  { path: '/feedback', label: 'Feedback', icon: MessageSquare, restricted: false },
   { path: '/hr', label: 'HR', icon: UserCog, restricted: true },
   { path: '/reports', label: 'Reports', icon: BarChart3, restricted: true },
   { path: '/users', label: 'Users', icon: ShieldCheck, adminOnly: true },

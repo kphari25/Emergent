@@ -2362,7 +2362,221 @@ async def get_hr_summary(current_user: dict = Depends(require_hr_access)):
         'pending_this_month': len(staff) - len(paid_this_month)
     }
 
-# Include router
+# ==================== EXECUTIVE DASHBOARD ====================
+
+@api_router.get("/reports/executive-dashboard")
+async def get_executive_dashboard(current_user: dict = Depends(get_current_user)):
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0).isoformat()
+    
+    ip_today = await db.checkin_history.count_documents({'patient_type': 'IP', 'checkin_time': {'$gte': today_start}})
+    op_today = await db.checkin_history.count_documents({'patient_type': 'OP', 'checkin_time': {'$gte': today_start}})
+    active_ip = await db.patients.count_documents({'patient_type': 'IP', 'status': 'active'})
+    active_op = await db.patients.count_documents({'patient_type': 'OP', 'status': 'active'})
+    
+    today_bills = await db.bills.find({'created_at': {'$gte': today_start}}, {'_id': 0}).to_list(500)
+    today_revenue = sum(b.get('total_amount', 0) for b in today_bills)
+    today_collected = sum(b.get('paid_amount', 0) for b in today_bills)
+    
+    month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0).isoformat()
+    month_bills = await db.bills.find({'created_at': {'$gte': month_start}}, {'_id': 0}).to_list(5000)
+    month_revenue = sum(b.get('total_amount', 0) for b in month_bills)
+    month_collected = sum(b.get('paid_amount', 0) for b in month_bills)
+    
+    doctor_stats = {}
+    today_checkins = await db.checkin_history.find({'checkin_time': {'$gte': today_start}}, {'_id': 0}).to_list(500)
+    for ci in today_checkins:
+        doc_id = ci.get('doctor_id', '')
+        if doc_id:
+            if doc_id not in doctor_stats:
+                doctor_stats[doc_id] = {'consultations': 0, 'name': ''}
+            doctor_stats[doc_id]['consultations'] += 1
+    
+    docs = await db.users.find({'role': 'doctor'}, {'_id': 0, 'id': 1, 'name': 1}).to_list(100)
+    doc_map = {d['id']: d['name'] for d in docs}
+    for doc_id in doctor_stats:
+        doctor_stats[doc_id]['name'] = doc_map.get(doc_id, 'Unknown')
+    
+    doctor_performance = sorted(
+        [{'doctor_id': k, 'name': v['name'], 'consultations': v['consultations']} for k, v in doctor_stats.items()],
+        key=lambda x: x['consultations'], reverse=True
+    )
+    
+    total_rooms = await db.rooms.count_documents({})
+    occupied_rooms = await db.rooms.count_documents({'is_occupied': True})
+    today_appts = await db.appointments.count_documents({'date': today})
+    completed_appts = await db.appointments.count_documents({'date': today, 'status': 'completed'})
+    waiting = await db.checkin_history.count_documents({'checkin_time': {'$gte': today_start}, 'queue_status': 'waiting'})
+    in_consultation = await db.checkin_history.count_documents({'checkin_time': {'$gte': today_start}, 'queue_status': 'in_consultation'})
+    total_leads = await db.leads.count_documents({})
+    new_leads = await db.leads.count_documents({'status': 'new'})
+    
+    return {
+        'today': {'ip_checkins': ip_today, 'op_checkins': op_today, 'total_checkins': ip_today + op_today, 'revenue': today_revenue, 'collected': today_collected, 'appointments': today_appts, 'completed_appointments': completed_appts},
+        'active': {'ip_patients': active_ip, 'op_patients': active_op, 'queue_waiting': waiting, 'queue_in_consultation': in_consultation},
+        'monthly': {'revenue': month_revenue, 'collected': month_collected},
+        'rooms': {'total': total_rooms, 'occupied': occupied_rooms, 'available': total_rooms - occupied_rooms, 'occupancy_rate': round((occupied_rooms / total_rooms * 100) if total_rooms > 0 else 0, 1)},
+        'doctor_performance': doctor_performance,
+        'leads': {'total': total_leads, 'new': new_leads}
+    }
+
+# ==================== LEAD MANAGEMENT ====================
+
+class LeadCreate(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = ""
+    source: str = "whatsapp"
+    inquiry_type: str = "general"
+    notes: Optional[str] = ""
+    assigned_to: Optional[str] = None
+    follow_up_date: Optional[str] = None
+
+@api_router.post("/leads")
+async def create_lead(lead: LeadCreate, current_user: dict = Depends(get_current_user)):
+    lead_id = str(uuid.uuid4())
+    lead_doc = {
+        'id': lead_id, 'name': lead.name, 'phone': lead.phone, 'email': lead.email or "",
+        'source': lead.source, 'inquiry_type': lead.inquiry_type, 'notes': lead.notes or "",
+        'assigned_to': lead.assigned_to, 'follow_up_date': lead.follow_up_date,
+        'status': 'new', 'converted_patient_id': None, 'created_by': current_user['id'],
+        'created_at': datetime.now(timezone.utc).isoformat(), 'updated_at': datetime.now(timezone.utc).isoformat(),
+        'history': [{'action': 'created', 'by': current_user.get('name', ''), 'at': datetime.now(timezone.utc).isoformat()}]
+    }
+    await db.leads.insert_one(lead_doc)
+    return await db.leads.find_one({'id': lead_id}, {'_id': 0})
+
+@api_router.get("/leads")
+async def get_leads(status: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if status and status != 'all':
+        query['status'] = status
+    return await db.leads.find(query, {'_id': 0}).sort('created_at', -1).to_list(1000)
+
+@api_router.put("/leads/{lead_id}")
+async def update_lead(lead_id: str, lead: LeadCreate, current_user: dict = Depends(get_current_user)):
+    existing = await db.leads.find_one({'id': lead_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    await db.leads.update_one({'id': lead_id}, {'$set': {
+        'name': lead.name, 'phone': lead.phone, 'email': lead.email or "",
+        'source': lead.source, 'inquiry_type': lead.inquiry_type, 'notes': lead.notes or "",
+        'assigned_to': lead.assigned_to, 'follow_up_date': lead.follow_up_date,
+        'updated_at': datetime.now(timezone.utc).isoformat()
+    }})
+    return await db.leads.find_one({'id': lead_id}, {'_id': 0})
+
+@api_router.put("/leads/{lead_id}/status")
+async def update_lead_status(lead_id: str, status: str, current_user: dict = Depends(get_current_user)):
+    valid = ['new', 'contacted', 'follow_up', 'converted', 'lost']
+    if status not in valid:
+        raise HTTPException(status_code=400, detail=f"Invalid status")
+    existing = await db.leads.find_one({'id': lead_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    await db.leads.update_one({'id': lead_id}, {
+        '$set': {'status': status, 'updated_at': datetime.now(timezone.utc).isoformat()},
+        '$push': {'history': {'action': f'status_changed_to_{status}', 'by': current_user.get('name', ''), 'at': datetime.now(timezone.utc).isoformat()}}
+    })
+    return await db.leads.find_one({'id': lead_id}, {'_id': 0})
+
+@api_router.post("/leads/{lead_id}/convert")
+async def convert_lead_to_patient(lead_id: str, current_user: dict = Depends(get_current_user)):
+    lead = await db.leads.find_one({'id': lead_id}, {'_id': 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    if lead.get('status') == 'converted':
+        raise HTTPException(status_code=400, detail="Lead already converted")
+    patient_id = str(uuid.uuid4())
+    pid = await generate_pid()
+    patient_doc = {
+        'id': patient_id, 'pid': pid, 'name': lead['name'], 'age': 0, 'gender': 'other',
+        'phone': lead['phone'], 'address': '', 'medical_history': '', 'prakriti': '',
+        'dob': '', 'email': lead.get('email', ''), 'blood_group': '', 'occupation': '',
+        'marital_status': '', 'emergency_contact_name': '', 'emergency_contact_phone': '',
+        'lifestyle': '', 'referral_source': lead.get('source', ''),
+        'status': 'active', 'patient_type': 'None', 'room_number': None,
+        'token_number': None, 'admission_date': None, 'priority': 'normal',
+        'queue_status': None, 'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.patients.insert_one(patient_doc)
+    await db.leads.update_one({'id': lead_id}, {
+        '$set': {'status': 'converted', 'converted_patient_id': patient_id, 'updated_at': datetime.now(timezone.utc).isoformat()},
+        '$push': {'history': {'action': 'converted_to_patient', 'patient_pid': pid, 'by': current_user.get('name', ''), 'at': datetime.now(timezone.utc).isoformat()}}
+    })
+    return {'message': f'Lead converted to patient {pid}', 'patient_id': patient_id, 'pid': pid}
+
+@api_router.delete("/leads/{lead_id}")
+async def delete_lead(lead_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.leads.delete_one({'id': lead_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    return {"message": "Lead deleted"}
+
+# ==================== FEEDBACK MANAGEMENT ====================
+
+class FeedbackCreate(BaseModel):
+    patient_id: Optional[str] = None
+    patient_name: Optional[str] = ""
+    rating: int = 5
+    feedback_text: Optional[str] = ""
+    source: str = "in_person"
+
+@api_router.post("/feedback")
+async def create_feedback(fb: FeedbackCreate, current_user: dict = Depends(get_current_user)):
+    fb_id = str(uuid.uuid4())
+    patient_name = fb.patient_name
+    if fb.patient_id and not patient_name:
+        patient = await db.patients.find_one({'id': fb.patient_id}, {'_id': 0, 'name': 1})
+        patient_name = patient.get('name', '') if patient else ''
+    fb_doc = {
+        'id': fb_id, 'patient_id': fb.patient_id, 'patient_name': patient_name,
+        'rating': fb.rating, 'feedback_text': fb.feedback_text or "", 'source': fb.source,
+        'escalation': fb.rating <= 2, 'escalation_resolved': False, 'escalation_notes': '',
+        'google_review_sent': False, 'created_by': current_user['id'],
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.feedback.insert_one(fb_doc)
+    return await db.feedback.find_one({'id': fb_id}, {'_id': 0})
+
+@api_router.get("/feedback")
+async def get_feedback(escalation_only: Optional[bool] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if escalation_only:
+        query['escalation'] = True
+    return await db.feedback.find(query, {'_id': 0}).sort('created_at', -1).to_list(500)
+
+@api_router.put("/feedback/{fb_id}/resolve")
+async def resolve_escalation(fb_id: str, notes: Optional[str] = "", current_user: dict = Depends(get_current_user)):
+    await db.feedback.update_one({'id': fb_id}, {'$set': {'escalation_resolved': True, 'escalation_notes': notes or "Resolved"}})
+    return await db.feedback.find_one({'id': fb_id}, {'_id': 0})
+
+@api_router.get("/feedback/summary")
+async def get_feedback_summary(current_user: dict = Depends(get_current_user)):
+    all_fb = await db.feedback.find({}, {'_id': 0}).to_list(5000)
+    total = len(all_fb)
+    if total == 0:
+        return {'total': 0, 'average_rating': 0, 'escalations': 0, 'unresolved': 0, 'by_rating': {}}
+    avg = sum(f['rating'] for f in all_fb) / total
+    by_rating = {}
+    for f in all_fb:
+        r = str(f['rating'])
+        by_rating[r] = by_rating.get(r, 0) + 1
+    return {
+        'total': total, 'average_rating': round(avg, 1),
+        'escalations': sum(1 for f in all_fb if f.get('escalation')),
+        'unresolved': sum(1 for f in all_fb if f.get('escalation') and not f.get('escalation_resolved')),
+        'by_rating': by_rating
+    }
+
+@api_router.delete("/feedback/{fb_id}")
+async def delete_feedback(fb_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.feedback.delete_one({'id': fb_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    return {"message": "Feedback deleted"}
+
+# Include router AFTER all routes are defined
 app.include_router(api_router)
 
 app.add_middleware(
