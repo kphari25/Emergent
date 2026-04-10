@@ -2224,9 +2224,8 @@ async def get_financial_report(start_date: Optional[str] = None, end_date: Optio
         date_filter['$lte'] = end_date if '$gte' in date_filter else end_date
     
     # Get all IP and OP patients (historical)
-    all_checkins = await db.checkin_history.find({}, {'_id': 0}).to_list(10000)
-    total_ip_checkins = len([c for c in all_checkins if c.get('patient_type') == 'IP'])
-    total_op_checkins = len([c for c in all_checkins if c.get('patient_type') == 'OP'])
+    total_ip_checkins = await db.checkin_history.count_documents({'patient_type': 'IP'})
+    total_op_checkins = await db.checkin_history.count_documents({'patient_type': 'OP'})
     
     # Current IP/OP
     current_ip = await db.patients.count_documents({'patient_type': 'IP', 'status': 'active'})
@@ -2234,9 +2233,9 @@ async def get_financial_report(start_date: Optional[str] = None, end_date: Optio
     
     # Revenue from bills
     bill_query = {'created_at': date_filter} if date_filter else {}
-    bills = await db.bills.find(bill_query, {'_id': 0}).to_list(10000)
-    total_revenue = sum(b['total_amount'] for b in bills)
-    collected_revenue = sum(b['paid_amount'] for b in bills)
+    bills = await db.bills.find(bill_query, {'_id': 0}).to_list(1000)
+    total_revenue = sum(b.get('total_amount', 0) for b in bills)
+    collected_revenue = sum(b.get('paid_amount', 0) for b in bills)
     
     # Medicine sales and profit (from bill items)
     medicine_sales = 0
@@ -2262,7 +2261,7 @@ async def get_financial_report(start_date: Optional[str] = None, end_date: Optio
     
     # Expenses
     expense_query = {'date': date_filter} if date_filter else {}
-    expenses = await db.expenses.find(expense_query, {'_id': 0}).to_list(10000)
+    expenses = await db.expenses.find(expense_query, {'_id': 0}).to_list(1000)
     total_expenses = sum(e['amount'] for e in expenses)
     
     # Expense by category
@@ -2281,7 +2280,7 @@ async def get_financial_report(start_date: Optional[str] = None, end_date: Optio
         else:
             salary_query['payment_date'] = {'$lte': end_date}
     
-    salary_payments = await db.salary_payments.find(salary_query, {'_id': 0}).to_list(10000)
+    salary_payments = await db.salary_payments.find(salary_query, {'_id': 0}).to_list(1000)
     total_salary_expense = sum(p['net_amount'] for p in salary_payments)
     
     # Total expenses including salaries
@@ -2383,7 +2382,7 @@ async def get_executive_dashboard(current_user: dict = Depends(get_current_user)
     today_collected = sum(b.get('paid_amount', 0) for b in today_bills)
     
     month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0).isoformat()
-    month_bills = await db.bills.find({'created_at': {'$gte': month_start}}, {'_id': 0}).to_list(5000)
+    month_bills = await db.bills.find({'created_at': {'$gte': month_start}}, {'_id': 0, 'total_amount': 1, 'paid_amount': 1}).to_list(1000)
     month_revenue = sum(b.get('total_amount', 0) for b in month_bills)
     month_collected = sum(b.get('paid_amount', 0) for b in month_bills)
     
@@ -2557,7 +2556,7 @@ async def resolve_escalation(fb_id: str, notes: Optional[str] = "", current_user
 
 @api_router.get("/feedback/summary")
 async def get_feedback_summary(current_user: dict = Depends(get_current_user)):
-    all_fb = await db.feedback.find({}, {'_id': 0}).to_list(5000)
+    all_fb = await db.feedback.find({}, {'_id': 0, 'rating': 1, 'escalation': 1, 'escalation_resolved': 1}).to_list(1000)
     total = len(all_fb)
     if total == 0:
         return {'total': 0, 'average_rating': 0, 'escalations': 0, 'unresolved': 0, 'by_rating': {}}

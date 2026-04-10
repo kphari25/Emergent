@@ -70,5 +70,9 @@ chainlit.md
 
 # Build caches
 .cache/
+
+# Credentials and memory files
+test_credentials.md
+memory/test_credentials.md
 frontend/node_modules/.cache/default-development/10.pack
 frontend/node_modules/.cache/default-development/10.pack
