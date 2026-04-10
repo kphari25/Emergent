@@ -1,0 +1,152 @@
+{
+  "summary": "REQ-4 (Therapy Scheduling) and REQ-5 (Consolidated Billing with Advance Deposits) fully tested. All backend APIs working (100%). All frontend UI elements verified. Logo updated to Tatva Ayurved custom logo in sidebar, mobile header, and invoice.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Backend: POST /api/therapy-types creates therapy type with name, category, duration, cost, gender_specific",
+    "Backend: GET /api/therapy-types returns list of therapy types",
+    "Backend: GET /api/therapy-types?category=yoga filters by category",
+    "Backend: PUT /api/therapy-types/{id} updates therapy type",
+    "Backend: DELETE /api/therapy-types/{id} deactivates therapy type",
+    "Backend: POST /api/therapy-schedules creates schedule with patient, therapy, date, time",
+    "Backend: GET /api/therapy-schedules returns list of schedules",
+    "Backend: GET /api/therapy-schedules?date=YYYY-MM-DD filters by date",
+    "Backend: GET /api/therapy-schedules?status=scheduled filters by status",
+    "Backend: GET /api/therapy-schedules/patient/{id} returns patient's schedules",
+    "Backend: PUT /api/therapy-schedules/{id}/status?status=in_progress updates status",
+    "Backend: PUT /api/therapy-schedules/{id}/status?status=completed updates status with completed_at",
+    "Backend: PUT /api/therapy-schedules/{id}/status with invalid status returns 400",
+    "Backend: POST /api/advances creates advance deposit with amount, balance, status=active",
+    "Backend: GET /api/advances returns list of advances",
+    "Backend: GET /api/advances?patient_id={id} filters by patient",
+    "Backend: GET /api/advances/patient/{id}/balance returns total_balance",
+    "Backend: POST /api/advances/apply-to-bill applies advance to bill, updates bill paid_amount",
+    "Backend: GET /api/billing/patient-summary/{id} returns consolidated summary (therapy, room, mess, advance, outstanding)",
+    "Backend: POST /api/bills creates OP bill with GST (18%)",
+    "Backend: POST /api/bills creates IP bill with room_charges, mess_charges, GST",
+    "Backend: GET /api/bills returns list of bills",
+    "Backend: GET /api/bills?status=pending filters by status",
+    "Backend: POST /api/bills/payment records payment",
+    "Frontend: Therapy Scheduling page loads with Today's Schedule and Therapy Types tabs",
+    "Frontend: Today's Schedule tab shows date filter and status filter",
+    "Frontend: Therapy Types tab shows all 5 seeded therapy types (Abhyanga, Shirodhara, Panchakarma, Basti, Nasya)",
+    "Frontend: Add Therapy Type dialog has name, category, duration, cost, gender restriction fields",
+    "Frontend: Schedule Therapy dialog has patient, therapy type, date, time, therapist, room, notes fields",
+    "Frontend: Therapy schedule cards show time, therapy name, status, patient name, cost",
+    "Frontend: Status update buttons (Start, Complete, Cancel) work correctly",
+    "Frontend: Billing page loads with Advance Deposit, Patient Summary, Create Invoice buttons",
+    "Frontend: Advance Deposit dialog has patient select, amount, payment method fields",
+    "Frontend: Patient Summary dialog shows therapy sessions, therapy charges, room charges, mess charges, advance balance, outstanding",
+    "Frontend: Auto-Fill Consolidated Bill button populates bill form from summary",
+    "Frontend: Create Invoice dialog has OP/IP tabs",
+    "Frontend: OP Bill form has consultation, treatment, other charges, discount, medicine, GST (18%) checkbox",
+    "Frontend: IP Bill form has admission/discharge date, consultation, room, treatment, mess charges, GST (18%) checkbox",
+    "Frontend: Invoice preview shows Tatva Ayurved logo (custom uploaded logo)",
+    "Frontend: Invoice preview shows hospital name, address, GSTIN, TAX INVOICE header",
+    "Frontend: Invoice preview shows charges table, subtotal, GST, grand total, amount in words",
+    "Frontend: Invoice preview shows payment status, amount paid, balance due",
+    "Frontend: Print Invoice button present in invoice preview",
+    "Frontend: Sidebar shows Tatva Ayurved logo (desktop)",
+    "Frontend: Mobile header shows Tatva Ayurved logo",
+    "Frontend: Therapies nav item present in sidebar"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_req4_req5_therapy_billing.py",
+    "/app/test_reports/pytest/pytest_req4_req5.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_req4_req5_therapy_billing.py"
+  ],
+  "success_rate": {
+    "backend": "100% (all API endpoints working)",
+    "frontend": "100% (all UI elements working)"
+  },
+  "test_credentials": {
+    "admin": "admin@ayurcare.com / admin1234"
+  },
+  "seed_data_creation": "Therapy types seeded: Abhyanga Massage (INR 1500), Shirodhara (INR 2000), Panchakarma Detox (INR 3500), Basti Therapy (INR 2500), Nasya Treatment (INR 1000). Test therapy schedule created for today (completed). Test advance deposit created (INR 10000). Test OP and IP bills created with GST.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "REQ-4 and REQ-5 fully functional. Therapy types CRUD working. Therapy scheduling with date/status filters working. Status transitions (scheduled→in_progress→completed) working. Advance deposits CRUD working with balance tracking. Apply advance to bill working. Patient billing summary consolidates therapy, room, mess charges with advance balance. OP/IP billing with GST (18%) working. Invoice preview shows custom Tatva Ayurved logo. Logo appears in sidebar (desktop), mobile header, and invoice.",
+  "features_verified": {
+    "therapy_types": {
+      "status": "WORKING",
+      "details": {
+        "create": "POST /api/therapy-types with name, category, duration_minutes, base_cost, requires_room, gender_specific, description",
+        "read": "GET /api/therapy-types, GET /api/therapy-types?category={category}",
+        "update": "PUT /api/therapy-types/{id}",
+        "delete": "DELETE /api/therapy-types/{id} (soft delete - sets is_active=false)",
+        "seeded_types": ["Abhyanga Massage", "Shirodhara", "Panchakarma Detox", "Basti Therapy", "Nasya Treatment"]
+      }
+    },
+    "therapy_scheduling": {
+      "status": "WORKING",
+      "details": {
+        "create": "POST /api/therapy-schedules with patient_id, therapy_type_id, scheduled_date, scheduled_time, therapist_id, room_id, notes",
+        "read": "GET /api/therapy-schedules, GET /api/therapy-schedules?date={date}&status={status}",
+        "patient_schedules": "GET /api/therapy-schedules/patient/{patient_id}",
+        "status_update": "PUT /api/therapy-schedules/{id}/status?status={scheduled|in_progress|completed|cancelled}",
+        "delete": "DELETE /api/therapy-schedules/{id}",
+        "validations": "Gender-based therapy validation, room conflict detection, therapist conflict detection"
+      }
+    },
+    "advance_deposits": {
+      "status": "WORKING",
+      "details": {
+        "create": "POST /api/advances with patient_id, amount, payment_method, notes",
+        "read": "GET /api/advances, GET /api/advances?patient_id={id}",
+        "balance": "GET /api/advances/patient/{id}/balance returns total_balance",
+        "apply_to_bill": "POST /api/advances/apply-to-bill?bill_id={id}&amount={amount}"
+      }
+    },
+    "patient_billing_summary": {
+      "status": "WORKING",
+      "details": {
+        "endpoint": "GET /api/billing/patient-summary/{patient_id}",
+        "returns": "patient, therapy_charges, therapy_sessions, therapies, room_charges, mess_charges, advance_balance, billed_total, paid_total, outstanding"
+      }
+    },
+    "billing_with_gst": {
+      "status": "WORKING",
+      "details": {
+        "gst_rate": "18%",
+        "op_bill": "consultation_charges, treatment_charges, other_charges, discount, items (medicines), gst_rate, gst_amount",
+        "ip_bill": "consultation_charges, room_charges, treatment_charges, mess_charges, other_charges, discount, items, gst_rate, gst_amount, admission_date, discharge_date"
+      }
+    },
+    "logo_update": {
+      "status": "WORKING",
+      "details": {
+        "logo_url": "https://customer-assets.emergentagent.com/job_1b7e9271-1a57-48d5-ade0-52ab639af0ef/artifacts/zx4aqsmj_Logo%20jpeg.jpg",
+        "locations": ["Sidebar (desktop)", "Mobile header", "Invoice header", "Login page"]
+      }
+    },
+    "frontend_therapy_scheduling": {
+      "status": "WORKING",
+      "details": {
+        "tabs": ["Today's Schedule", "Therapy Types"],
+        "filters": ["Date filter", "Status filter (all, scheduled, in_progress, completed, cancelled)"],
+        "dialogs": ["Add Therapy Type", "Schedule Therapy Session"],
+        "actions": ["Start (→in_progress)", "Complete (→completed)", "Cancel (→cancelled)", "Delete"]
+      }
+    },
+    "frontend_billing": {
+      "status": "WORKING",
+      "details": {
+        "buttons": ["Advance Deposit", "Patient Summary", "Create Invoice"],
+        "filters": ["Bill Type (All, OP, IP)", "Status (All, Pending, Partial, Paid)"],
+        "dialogs": ["Advance Deposit", "Patient Summary", "Create Invoice (OP/IP tabs)", "Invoice Preview"],
+        "invoice_features": ["Print Invoice", "Apply Advance Deposit", "GST toggle (18%)"]
+      }
+    }
+  }
+}

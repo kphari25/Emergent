@@ -16,7 +16,8 @@ import {
   ListOrdered,
   Bed,
   UserPlus,
-  MessageSquare
+  MessageSquare,
+  Stethoscope
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ const allNavItems = [
   { path: '/inventory', label: 'Inventory', icon: Package, restricted: false },
   { path: '/appointments', label: 'Appointments', icon: Calendar, restricted: false },
   { path: '/rooms', label: 'Rooms', icon: Bed, restricted: false },
+  { path: '/therapies', label: 'Therapies', icon: Stethoscope, restricted: false },
   { path: '/billing', label: 'Billing', icon: Receipt, restricted: false },
   { path: '/mess', label: 'Mess', icon: UtensilsCrossed, restricted: false },
   { path: '/leads', label: 'Leads', icon: UserPlus, restricted: false },
@@ -74,7 +76,7 @@ export const Layout = ({ children }) => {
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
             <img 
-              src="https://customer-assets.emergentagent.com/job_756d16a4-b299-4f97-8859-f036a0db1e8b/artifacts/3xynh5cc_tatva.jpg" 
+              src="https://customer-assets.emergentagent.com/job_1b7e9271-1a57-48d5-ade0-52ab639af0ef/artifacts/zx4aqsmj_Logo%20jpeg.jpg" 
               alt="Tatva Ayurved"
               className="w-10 h-10 rounded-xl object-cover"
             />
@@ -122,7 +124,7 @@ export const Layout = ({ children }) => {
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#344E41] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <img 
-            src="https://customer-assets.emergentagent.com/job_756d16a4-b299-4f97-8859-f036a0db1e8b/artifacts/3xynh5cc_tatva.jpg" 
+            src="https://customer-assets.emergentagent.com/job_1b7e9271-1a57-48d5-ade0-52ab639af0ef/artifacts/zx4aqsmj_Logo%20jpeg.jpg" 
             alt="Tatva Ayurved"
             className="w-8 h-8 rounded-lg object-cover"
           />

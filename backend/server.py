@@ -2579,6 +2579,365 @@ async def delete_feedback(fb_id: str, current_user: dict = Depends(get_current_u
         raise HTTPException(status_code=404, detail="Feedback not found")
     return {"message": "Feedback deleted"}
 
+# ==================== THERAPY SCHEDULING (REQ-4) ====================
+
+class TherapyTypeCreate(BaseModel):
+    name: str
+    category: str = "general"  # panchakarma, massage, general, yoga
+    duration_minutes: int = 60
+    base_cost: float = 0
+    requires_room: bool = True
+    gender_specific: Optional[str] = None  # male, female, or None for any
+    description: Optional[str] = ""
+
+class TherapyScheduleCreate(BaseModel):
+    patient_id: str
+    therapy_type_id: str
+    therapist_id: Optional[str] = None
+    room_id: Optional[str] = None
+    scheduled_date: str
+    scheduled_time: str
+    notes: Optional[str] = ""
+
+@api_router.post("/therapy-types")
+async def create_therapy_type(therapy: TherapyTypeCreate, current_user: dict = Depends(get_current_user)):
+    therapy_id = str(uuid.uuid4())
+    therapy_doc = {
+        'id': therapy_id,
+        'name': therapy.name,
+        'category': therapy.category,
+        'duration_minutes': therapy.duration_minutes,
+        'base_cost': therapy.base_cost,
+        'requires_room': therapy.requires_room,
+        'gender_specific': therapy.gender_specific,
+        'description': therapy.description or "",
+        'is_active': True,
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.therapy_types.insert_one(therapy_doc)
+    return await db.therapy_types.find_one({'id': therapy_id}, {'_id': 0})
+
+@api_router.get("/therapy-types")
+async def get_therapy_types(category: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {'is_active': True}
+    if category:
+        query['category'] = category
+    return await db.therapy_types.find(query, {'_id': 0}).to_list(200)
+
+@api_router.put("/therapy-types/{therapy_id}")
+async def update_therapy_type(therapy_id: str, therapy: TherapyTypeCreate, current_user: dict = Depends(get_current_user)):
+    update_data = therapy.dict()
+    await db.therapy_types.update_one({'id': therapy_id}, {'$set': update_data})
+    updated = await db.therapy_types.find_one({'id': therapy_id}, {'_id': 0})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Therapy type not found")
+    return updated
+
+@api_router.delete("/therapy-types/{therapy_id}")
+async def delete_therapy_type(therapy_id: str, current_user: dict = Depends(get_current_user)):
+    await db.therapy_types.update_one({'id': therapy_id}, {'$set': {'is_active': False}})
+    return {"message": "Therapy type deactivated"}
+
+@api_router.post("/therapy-schedules")
+async def create_therapy_schedule(schedule: TherapyScheduleCreate, current_user: dict = Depends(get_current_user)):
+    patient = await db.patients.find_one({'id': schedule.patient_id}, {'_id': 0})
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    therapy_type = await db.therapy_types.find_one({'id': schedule.therapy_type_id}, {'_id': 0})
+    if not therapy_type:
+        raise HTTPException(status_code=404, detail="Therapy type not found")
+    
+    # Gender-based validation
+    if therapy_type.get('gender_specific'):
+        patient_gender = patient.get('gender', '').lower()
+        if patient_gender and patient_gender != therapy_type['gender_specific']:
+            raise HTTPException(status_code=400, detail=f"This therapy is restricted to {therapy_type['gender_specific']} patients only")
+    
+    # Check for room conflicts if room assigned
+    if schedule.room_id and therapy_type.get('requires_room'):
+        duration = therapy_type.get('duration_minutes', 60)
+        # Parse scheduled time
+        try:
+            sched_hour, sched_min = map(int, schedule.scheduled_time.split(':'))
+            start_minutes = sched_hour * 60 + sched_min
+            end_minutes = start_minutes + duration
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid time format. Use HH:MM")
+        
+        existing = await db.therapy_schedules.find({
+            'room_id': schedule.room_id,
+            'scheduled_date': schedule.scheduled_date,
+            'status': {'$nin': ['cancelled', 'completed']}
+        }, {'_id': 0}).to_list(100)
+        
+        for ex in existing:
+            try:
+                ex_hour, ex_min = map(int, ex['scheduled_time'].split(':'))
+                ex_start = ex_hour * 60 + ex_min
+                ex_type = await db.therapy_types.find_one({'id': ex['therapy_type_id']}, {'_id': 0})
+                ex_duration = ex_type.get('duration_minutes', 60) if ex_type else 60
+                ex_end = ex_start + ex_duration
+                if start_minutes < ex_end and end_minutes > ex_start:
+                    raise HTTPException(status_code=409, detail=f"Room conflict: already booked from {ex['scheduled_time']} for {ex_duration} min")
+            except ValueError:
+                continue
+    
+    # Check therapist conflicts
+    if schedule.therapist_id:
+        duration = therapy_type.get('duration_minutes', 60)
+        try:
+            sched_hour, sched_min = map(int, schedule.scheduled_time.split(':'))
+            start_minutes = sched_hour * 60 + sched_min
+            end_minutes = start_minutes + duration
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid time format. Use HH:MM")
+        
+        therapist_existing = await db.therapy_schedules.find({
+            'therapist_id': schedule.therapist_id,
+            'scheduled_date': schedule.scheduled_date,
+            'status': {'$nin': ['cancelled', 'completed']}
+        }, {'_id': 0}).to_list(100)
+        
+        for ex in therapist_existing:
+            try:
+                ex_hour, ex_min = map(int, ex['scheduled_time'].split(':'))
+                ex_start = ex_hour * 60 + ex_min
+                ex_type = await db.therapy_types.find_one({'id': ex['therapy_type_id']}, {'_id': 0})
+                ex_duration = ex_type.get('duration_minutes', 60) if ex_type else 60
+                ex_end = ex_start + ex_duration
+                if start_minutes < ex_end and end_minutes > ex_start:
+                    raise HTTPException(status_code=409, detail=f"Therapist conflict: already booked from {ex['scheduled_time']}")
+            except ValueError:
+                continue
+    
+    # Get therapist name
+    therapist_name = None
+    if schedule.therapist_id:
+        therapist = await db.staff.find_one({'id': schedule.therapist_id}, {'_id': 0})
+        if not therapist:
+            therapist = await db.users.find_one({'id': schedule.therapist_id}, {'_id': 0})
+        if therapist:
+            therapist_name = therapist.get('name')
+    
+    schedule_id = str(uuid.uuid4())
+    schedule_doc = {
+        'id': schedule_id,
+        'patient_id': schedule.patient_id,
+        'patient_name': patient['name'],
+        'therapy_type_id': schedule.therapy_type_id,
+        'therapy_name': therapy_type['name'],
+        'therapy_category': therapy_type.get('category', 'general'),
+        'duration_minutes': therapy_type.get('duration_minutes', 60),
+        'cost': therapy_type.get('base_cost', 0),
+        'therapist_id': schedule.therapist_id,
+        'therapist_name': therapist_name,
+        'room_id': schedule.room_id,
+        'scheduled_date': schedule.scheduled_date,
+        'scheduled_time': schedule.scheduled_time,
+        'status': 'scheduled',  # scheduled, in_progress, completed, cancelled
+        'notes': schedule.notes or "",
+        'created_by': current_user['id'],
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.therapy_schedules.insert_one(schedule_doc)
+    return await db.therapy_schedules.find_one({'id': schedule_id}, {'_id': 0})
+
+@api_router.get("/therapy-schedules")
+async def get_therapy_schedules(
+    date: Optional[str] = None,
+    patient_id: Optional[str] = None,
+    therapist_id: Optional[str] = None,
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    if date:
+        query['scheduled_date'] = date
+    if patient_id:
+        query['patient_id'] = patient_id
+    if therapist_id:
+        query['therapist_id'] = therapist_id
+    if status and status != 'all':
+        query['status'] = status
+    schedules = await db.therapy_schedules.find(query, {'_id': 0}).sort('scheduled_time', 1).to_list(500)
+    return schedules
+
+@api_router.get("/therapy-schedules/patient/{patient_id}")
+async def get_patient_therapy_schedules(patient_id: str, current_user: dict = Depends(get_current_user)):
+    schedules = await db.therapy_schedules.find(
+        {'patient_id': patient_id}, {'_id': 0}
+    ).sort('scheduled_date', -1).to_list(200)
+    return schedules
+
+@api_router.put("/therapy-schedules/{schedule_id}/status")
+async def update_therapy_schedule_status(schedule_id: str, status: str, current_user: dict = Depends(get_current_user)):
+    if status not in ['scheduled', 'in_progress', 'completed', 'cancelled']:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    update_data = {'status': status}
+    if status == 'completed':
+        update_data['completed_at'] = datetime.now(timezone.utc).isoformat()
+    await db.therapy_schedules.update_one({'id': schedule_id}, {'$set': update_data})
+    updated = await db.therapy_schedules.find_one({'id': schedule_id}, {'_id': 0})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    return updated
+
+@api_router.delete("/therapy-schedules/{schedule_id}")
+async def delete_therapy_schedule(schedule_id: str, current_user: dict = Depends(get_current_user)):
+    result = await db.therapy_schedules.delete_one({'id': schedule_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    return {"message": "Schedule deleted"}
+
+# ==================== ADVANCE DEPOSITS (REQ-5) ====================
+
+class AdvanceCreate(BaseModel):
+    patient_id: str
+    amount: float
+    payment_method: str = "cash"
+    notes: Optional[str] = ""
+
+@api_router.post("/advances")
+async def create_advance(advance: AdvanceCreate, current_user: dict = Depends(get_current_user)):
+    patient = await db.patients.find_one({'id': advance.patient_id}, {'_id': 0})
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    advance_id = str(uuid.uuid4())
+    advance_doc = {
+        'id': advance_id,
+        'patient_id': advance.patient_id,
+        'patient_name': patient['name'],
+        'amount': advance.amount,
+        'used_amount': 0,
+        'balance': advance.amount,
+        'payment_method': advance.payment_method,
+        'status': 'active',  # active, used, refunded
+        'notes': advance.notes or "",
+        'created_by': current_user['id'],
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.advances.insert_one(advance_doc)
+    return await db.advances.find_one({'id': advance_id}, {'_id': 0})
+
+@api_router.get("/advances")
+async def get_advances(patient_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if patient_id:
+        query['patient_id'] = patient_id
+    return await db.advances.find(query, {'_id': 0}).sort('created_at', -1).to_list(500)
+
+@api_router.get("/advances/patient/{patient_id}/balance")
+async def get_patient_advance_balance(patient_id: str, current_user: dict = Depends(get_current_user)):
+    advances = await db.advances.find({'patient_id': patient_id, 'status': 'active'}, {'_id': 0}).to_list(100)
+    total_balance = sum(a.get('balance', 0) for a in advances)
+    return {'patient_id': patient_id, 'total_balance': total_balance, 'advances': advances}
+
+@api_router.post("/advances/apply-to-bill")
+async def apply_advance_to_bill(bill_id: str, amount: float, current_user: dict = Depends(get_current_user)):
+    bill = await db.bills.find_one({'id': bill_id})
+    if not bill:
+        raise HTTPException(status_code=404, detail="Bill not found")
+    
+    patient_id = bill['patient_id']
+    advances = await db.advances.find(
+        {'patient_id': patient_id, 'status': 'active', 'balance': {'$gt': 0}},
+        {'_id': 0}
+    ).sort('created_at', 1).to_list(50)
+    
+    remaining_to_apply = min(amount, bill['total_amount'] - bill['paid_amount'])
+    total_applied = 0
+    
+    for adv in advances:
+        if remaining_to_apply <= 0:
+            break
+        can_use = min(adv['balance'], remaining_to_apply)
+        new_used = adv['used_amount'] + can_use
+        new_balance = adv['amount'] - new_used
+        new_status = 'used' if new_balance <= 0 else 'active'
+        await db.advances.update_one(
+            {'id': adv['id']},
+            {'$set': {'used_amount': new_used, 'balance': new_balance, 'status': new_status}}
+        )
+        remaining_to_apply -= can_use
+        total_applied += can_use
+    
+    if total_applied > 0:
+        new_paid = bill['paid_amount'] + total_applied
+        new_status = 'paid' if new_paid >= bill['total_amount'] else 'partial'
+        await db.bills.update_one(
+            {'id': bill_id},
+            {'$set': {'paid_amount': new_paid, 'status': new_status}}
+        )
+        payment_record = {
+            'id': str(uuid.uuid4()),
+            'bill_id': bill_id,
+            'amount': total_applied,
+            'payment_method': 'advance',
+            'user_id': current_user['id'],
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+        await db.payments.insert_one(payment_record)
+    
+    updated_bill = await db.bills.find_one({'id': bill_id}, {'_id': 0})
+    return {'applied_amount': total_applied, 'bill': ensure_bill_profit_fields(updated_bill)}
+
+# Get patient's therapy charges for billing consolidation
+@api_router.get("/billing/patient-summary/{patient_id}")
+async def get_patient_billing_summary(patient_id: str, current_user: dict = Depends(get_current_user)):
+    patient = await db.patients.find_one({'id': patient_id}, {'_id': 0})
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    
+    # Get completed therapy sessions
+    therapies = await db.therapy_schedules.find(
+        {'patient_id': patient_id, 'status': 'completed'}, {'_id': 0}
+    ).to_list(200)
+    therapy_total = sum(t.get('cost', 0) for t in therapies)
+    
+    # Get room charges if IP
+    room_total = 0
+    if patient.get('patient_type') == 'IP' and patient.get('room_number'):
+        room = await db.rooms.find_one({'room_number': patient['room_number']}, {'_id': 0})
+        if room:
+            admitted_date = patient.get('admitted_date')
+            if admitted_date:
+                try:
+                    admit = datetime.fromisoformat(admitted_date)
+                    days = max(1, (datetime.now(timezone.utc) - admit).days)
+                    room_total = days * room.get('daily_rate', 0)
+                except (ValueError, TypeError):
+                    room_total = room.get('daily_rate', 0)
+    
+    # Get mess charges
+    meals = await db.patient_meals.find({'patient_id': patient_id}, {'_id': 0}).to_list(500)
+    mess_total = sum(m.get('total_cost', 0) for m in meals)
+    
+    # Get advance balance
+    advances = await db.advances.find(
+        {'patient_id': patient_id, 'status': 'active'}, {'_id': 0}
+    ).to_list(50)
+    advance_balance = sum(a.get('balance', 0) for a in advances)
+    
+    # Get existing bills total
+    bills = await db.bills.find({'patient_id': patient_id}, {'_id': 0}).to_list(100)
+    billed_total = sum(b.get('total_amount', 0) for b in bills)
+    paid_total = sum(b.get('paid_amount', 0) for b in bills)
+    
+    return {
+        'patient': patient,
+        'therapy_charges': therapy_total,
+        'therapy_sessions': len(therapies),
+        'therapies': therapies,
+        'room_charges': room_total,
+        'mess_charges': mess_total,
+        'advance_balance': advance_balance,
+        'billed_total': billed_total,
+        'paid_total': paid_total,
+        'outstanding': billed_total - paid_total
+    }
+
 # Include router AFTER all routes are defined
 app.include_router(api_router)
 

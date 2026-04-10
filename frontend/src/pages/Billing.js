@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Plus, Receipt, IndianRupee, Check, Clock, AlertCircle, Trash2, Printer, X, Bed, User } from 'lucide-react';
+import { Plus, Receipt, IndianRupee, Check, Clock, AlertCircle, Trash2, Printer, X, Bed, User, Wallet, FileText } from 'lucide-react';
 
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -21,7 +21,8 @@ const HOSPITAL_INFO = {
   city: 'Kozhikode, Kerala - 673001',
   phone: '+91 9895112264',
   email: 'info@tatvaayurved.com',
-  gstin: 'GSTIN: 32XXXXX1234X1ZX'
+  gstin: 'GSTIN: 32XXXXX1234X1ZX',
+  logo: 'https://customer-assets.emergentagent.com/job_1b7e9271-1a57-48d5-ade0-52ab639af0ef/artifacts/zx4aqsmj_Logo%20jpeg.jpg'
 };
 
 // GST Rate
@@ -74,6 +75,13 @@ export default function Billing() {
   const [newItem, setNewItem] = useState({ name: '', quantity: 1, sale_price: '', purchase_price: '' });
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [advanceDialogOpen, setAdvanceDialogOpen] = useState(false);
+  const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
+  const [advanceAmount, setAdvanceAmount] = useState('');
+  const [advanceMethod, setAdvanceMethod] = useState('cash');
+  const [advancePatientId, setAdvancePatientId] = useState('');
+  const [patientSummary, setPatientSummary] = useState(null);
+  const [summaryPatientId, setSummaryPatientId] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -256,6 +264,72 @@ export default function Billing() {
     setInvoiceDialogOpen(true);
   };
 
+  const handleAdvanceDeposit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API_URL}/advances`, {
+        patient_id: advancePatientId,
+        amount: parseFloat(advanceAmount),
+        payment_method: advanceMethod
+      }, { headers: getAuthHeaders() });
+      toast.success('Advance deposit recorded');
+      setAdvanceDialogOpen(false);
+      setAdvanceAmount('');
+      setAdvancePatientId('');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to record advance');
+    }
+  };
+
+  const fetchPatientSummary = async (patientId) => {
+    if (!patientId) return;
+    try {
+      const res = await axios.get(`${API_URL}/billing/patient-summary/${patientId}`, { headers: getAuthHeaders() });
+      setPatientSummary(res.data);
+    } catch (error) {
+      toast.error('Failed to load patient billing summary');
+    }
+  };
+
+  const handleApplyAdvance = async (billId) => {
+    try {
+      const advanceRes = await axios.get(`${API_URL}/advances/patient/${selectedBill.patient_id}/balance`, { headers: getAuthHeaders() });
+      const balance = advanceRes.data.total_balance;
+      if (balance <= 0) {
+        toast.error('No advance balance available');
+        return;
+      }
+      const remaining = selectedBill.total_amount - selectedBill.paid_amount;
+      const toApply = Math.min(balance, remaining);
+      await axios.post(`${API_URL}/advances/apply-to-bill?bill_id=${billId}&amount=${toApply}`, {}, { headers: getAuthHeaders() });
+      toast.success(`Applied INR ${toApply.toFixed(2)} from advance`);
+      setPaymentDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to apply advance');
+    }
+  };
+
+  const autoPopulateFromSummary = () => {
+    if (!patientSummary) return;
+    if (billType === 'IP') {
+      setIpBill(prev => ({
+        ...prev,
+        patient_id: patientSummary.patient.id,
+        room_charges: patientSummary.room_charges.toString(),
+        treatment_charges: patientSummary.therapy_charges.toString(),
+        mess_charges: patientSummary.mess_charges.toString(),
+      }));
+    } else {
+      setOpBill(prev => ({
+        ...prev,
+        patient_id: patientSummary.patient.id,
+        treatment_charges: patientSummary.therapy_charges.toString(),
+      }));
+    }
+    toast.success('Charges auto-populated from patient summary');
+  };
+
   const handlePrint = () => {
     const printContent = printRef.current;
     const originalContents = document.body.innerHTML;
@@ -311,13 +385,102 @@ export default function Billing() {
           <h1 className="page-title">Billing & Invoices</h1>
           <p className="page-subtitle">Create and manage IP/OP patient bills with GST invoices</p>
         </div>
-        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#3A5A40] hover:bg-[#344E41] rounded-full px-6" data-testid="create-bill-btn">
-              <Plus className="w-5 h-5 mr-2" />
-              Create Invoice
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          {/* Advance Deposit Button */}
+          <Dialog open={advanceDialogOpen} onOpenChange={setAdvanceDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="rounded-full border-[#D4A373] text-[#D4A373] hover:bg-[#D4A373]/10" data-testid="advance-deposit-btn">
+                <Wallet className="w-5 h-5 mr-2" />
+                Advance Deposit
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle style={{ fontFamily: 'Playfair Display' }}>Record Advance Deposit</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAdvanceDeposit} className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label>Patient</Label>
+                  <Select value={advancePatientId} onValueChange={setAdvancePatientId}>
+                    <SelectTrigger className="rounded-xl" data-testid="advance-patient-select"><SelectValue placeholder="Select patient" /></SelectTrigger>
+                    <SelectContent>
+                      {patients.map(p => <SelectItem key={p.id} value={p.id}>{p.name} - {p.phone}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Amount (INR)</Label>
+                  <Input type="number" value={advanceAmount} onChange={(e) => setAdvanceAmount(e.target.value)} required className="rounded-xl" placeholder="Enter advance amount" data-testid="advance-amount" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Payment Method</Label>
+                  <Select value={advanceMethod} onValueChange={setAdvanceMethod}>
+                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" className="w-full bg-[#D4A373] hover:bg-[#D4A373]/90 rounded-full" data-testid="submit-advance">Record Advance</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Consolidated Summary Button */}
+          <Dialog open={summaryDialogOpen} onOpenChange={setSummaryDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="rounded-full" data-testid="billing-summary-btn">
+                <FileText className="w-5 h-5 mr-2" />
+                Patient Summary
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle style={{ fontFamily: 'Playfair Display' }}>Patient Billing Summary</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label>Select Patient</Label>
+                  <Select value={summaryPatientId} onValueChange={(v) => { setSummaryPatientId(v); fetchPatientSummary(v); }}>
+                    <SelectTrigger className="rounded-xl" data-testid="summary-patient-select"><SelectValue placeholder="Select patient" /></SelectTrigger>
+                    <SelectContent>
+                      {patients.map(p => <SelectItem key={p.id} value={p.id}>{p.name} - {p.phone}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {patientSummary && (
+                  <div className="space-y-3">
+                    <div className="p-4 bg-[#3A5A40]/5 rounded-xl">
+                      <h4 className="font-semibold mb-2 text-[#3A5A40]">{patientSummary.patient.name}</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div><span className="text-gray-500">Therapy Sessions:</span> <strong>{patientSummary.therapy_sessions}</strong></div>
+                        <div><span className="text-gray-500">Therapy Charges:</span> <strong>INR {patientSummary.therapy_charges.toFixed(2)}</strong></div>
+                        <div><span className="text-gray-500">Room Charges:</span> <strong>INR {patientSummary.room_charges.toFixed(2)}</strong></div>
+                        <div><span className="text-gray-500">Mess Charges:</span> <strong>INR {patientSummary.mess_charges.toFixed(2)}</strong></div>
+                        <div><span className="text-gray-500">Advance Balance:</span> <strong className="text-[#588157]">INR {patientSummary.advance_balance.toFixed(2)}</strong></div>
+                        <div><span className="text-gray-500">Outstanding:</span> <strong className="text-[#BC4749]">INR {patientSummary.outstanding.toFixed(2)}</strong></div>
+                      </div>
+                    </div>
+                    <Button onClick={() => { autoPopulateFromSummary(); setSummaryDialogOpen(false); setAddDialogOpen(true); }} className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="auto-populate-btn">
+                      Auto-Fill Consolidated Bill
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Create Invoice */}
+          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-[#3A5A40] hover:bg-[#344E41] rounded-full px-6" data-testid="create-bill-btn">
+                <Plus className="w-5 h-5 mr-2" />
+                Create Invoice
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle style={{ fontFamily: 'Playfair Display' }}>Create New Invoice</DialogTitle>
@@ -602,6 +765,7 @@ export default function Billing() {
             </Tabs>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -757,6 +921,9 @@ export default function Billing() {
               <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="submit-payment-btn">
                 Record Payment
               </Button>
+              <Button type="button" variant="outline" className="w-full rounded-full border-[#D4A373] text-[#D4A373] hover:bg-[#D4A373]/10" onClick={() => handleApplyAdvance(selectedBill.id)} data-testid="apply-advance-btn">
+                <Wallet className="w-4 h-4 mr-2" /> Apply Advance Deposit
+              </Button>
             </form>
           )}
         </DialogContent>
@@ -843,7 +1010,7 @@ function PrintableInvoice({ bill, patient }) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `3px solid ${themeColor}`, paddingBottom: '15px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <div style={{ width: '70px', height: '70px', background: `linear-gradient(135deg, ${themeColor} 0%, ${isIP ? '#E8C49B' : '#588157'} 100%)`, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '28px', fontWeight: 'bold', fontFamily: 'Georgia, serif' }}>TA</div>
+          <img src={HOSPITAL_INFO.logo} alt="Tatva Ayurved" style={{ width: '70px', height: '70px', borderRadius: '12px', objectFit: 'cover' }} />
           <div>
             <h1 style={{ margin: 0, fontSize: '24px', color: themeColor, fontFamily: 'Georgia, serif' }}>{HOSPITAL_INFO.name}</h1>
             <p style={{ margin: '2px 0', fontSize: '11px', color: '#666' }}>{HOSPITAL_INFO.address}</p>

@@ -14,6 +14,7 @@ import HR from "@/pages/HR";
 import Mess from "@/pages/Mess";
 import QueueDashboard from "@/pages/QueueDashboard";
 import RoomManagement from "@/pages/RoomManagement";
+import TherapyScheduling from "@/pages/TherapyScheduling";
 import LeadManagement from "@/pages/LeadManagement";
 import FeedbackPage from "@/pages/FeedbackPage";
 import UserManagement from "@/pages/UserManagement";
@@ -105,6 +106,7 @@ function App() {
                     <Route path="inventory" element={<Inventory />} />
                     <Route path="appointments" element={<Appointments />} />
                     <Route path="rooms" element={<RoomManagement />} />
+                    <Route path="therapies" element={<TherapyScheduling />} />
                     <Route path="billing" element={<Billing />} />
                     <Route path="mess" element={<Mess />} />
                     <Route path="leads" element={<LeadManagement />} />
