@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Plus, Stethoscope, Clock, CheckCircle, XCircle, Calendar, User, Trash2, Play, AlertTriangle } from 'lucide-react';
+import { Plus, Stethoscope, Clock, CheckCircle, XCircle, Calendar, User, Trash2, Play, AlertTriangle, MessageCircle } from 'lucide-react';
+import { openWhatsApp, therapyReminderMsg, formatPhoneForWhatsApp } from '@/utils/whatsapp';
 
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -365,6 +366,13 @@ export default function TherapyScheduling() {
                       </div>
                     </div>
                     <div className="flex gap-1 ml-4">
+                      {s.patient_phone && formatPhoneForWhatsApp(s.patient_phone) && s.status === 'scheduled' && (
+                        <Button size="sm" variant="outline" className="rounded-full text-[#25D366] border-[#25D366]/40 hover:bg-[#25D366]/10"
+                          onClick={() => openWhatsApp(s.patient_phone, therapyReminderMsg(s.patient_name, s.therapy_name, s.scheduled_date, s.scheduled_time, s.duration_minutes))}
+                          title="Send WhatsApp reminder" data-testid={`wa-therapy-${s.id}`}>
+                          <MessageCircle className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                       {s.status === 'scheduled' && (
                         <>
                           <Button size="sm" variant="outline" className="rounded-full text-amber-600 border-amber-300 hover:bg-amber-50" onClick={() => updateScheduleStatus(s.id, 'in_progress')} data-testid={`start-${s.id}`}>

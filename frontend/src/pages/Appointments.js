@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Plus, Calendar as CalendarIcon, Clock, User, Check, X } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, Clock, User, Check, X, MessageCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { openWhatsApp, appointmentReminderMsg, formatPhoneForWhatsApp } from '@/utils/whatsapp';
 
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -282,6 +283,27 @@ export default function Appointments() {
                       </div>
                       {apt.status === 'scheduled' && (
                         <div className="flex items-center gap-2">
+                          {apt.patient_phone && formatPhoneForWhatsApp(apt.patient_phone) && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-[#25D366] hover:bg-[#25D366]/10"
+                              onClick={() => openWhatsApp(
+                                apt.patient_phone,
+                                appointmentReminderMsg(
+                                  apt.patient_name,
+                                  format(selectedDate, 'dd/MM/yyyy'),
+                                  apt.time,
+                                  apt.treatment_type,
+                                  apt.doctor_name
+                                )
+                              )}
+                              title="Send WhatsApp reminder"
+                              data-testid={`wa-remind-${apt.id}`}
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button
                             size="icon"
                             variant="ghost"

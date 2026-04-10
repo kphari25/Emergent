@@ -158,6 +158,7 @@ class AppointmentResponse(BaseModel):
     id: str
     patient_id: str
     patient_name: str
+    patient_phone: Optional[str] = ""
     doctor_id: str
     doctor_name: str
     date: str
@@ -1056,6 +1057,7 @@ async def create_appointment(appointment: AppointmentCreate, current_user: dict 
         'id': appointment_id,
         'patient_id': appointment.patient_id,
         'patient_name': patient['name'],
+        'patient_phone': patient.get('phone', ''),
         'doctor_id': appointment.doctor_id,
         'doctor_name': doctor['name'],
         'date': appointment.date,
@@ -2725,6 +2727,7 @@ async def create_therapy_schedule(schedule: TherapyScheduleCreate, current_user:
         'id': schedule_id,
         'patient_id': schedule.patient_id,
         'patient_name': patient['name'],
+        'patient_phone': patient.get('phone', ''),
         'therapy_type_id': schedule.therapy_type_id,
         'therapy_name': therapy_type['name'],
         'therapy_category': therapy_type.get('category', 'general'),

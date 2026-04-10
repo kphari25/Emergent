@@ -13,9 +13,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { 
   ArrowLeft, User, Pill, Calendar, Receipt, FileText, Plus, 
-  Clock, Stethoscope, Package, IndianRupee, Trash2, History, Bed, LogIn
+  Clock, Stethoscope, Package, IndianRupee, Trash2, History, Bed, LogIn, MessageCircle, Send
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { 
+  openWhatsApp, followUpReminderMsg, postDischargeDietMsg, 
+  medicineRefillMsg, generalMsg, formatPhoneForWhatsApp
+} from '@/utils/whatsapp';
 
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -439,6 +443,71 @@ export default function PatientDetails() {
           </CardContent>
         </Card>
       </div>
+
+      {/* WhatsApp Messaging */}
+      {patient.phone && formatPhoneForWhatsApp(patient.phone) && (
+        <Card className="mb-8 border-green-200 bg-green-50/30" data-testid="whatsapp-section">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-[#25D366] flex items-center justify-center">
+                <MessageCircle className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm text-[#1A1C18]">WhatsApp Quick Messages</p>
+                <p className="text-xs text-gray-500">Send pre-filled messages to {patient.name} ({patient.phone})</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full border-[#25D366] text-[#25D366] hover:bg-[#25D366]/10 text-xs"
+                onClick={() => openWhatsApp(patient.phone, generalMsg(patient.name))}
+                data-testid="wa-general-msg"
+              >
+                <Send className="w-3 h-3 mr-1.5" /> General Message
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full border-[#25D366] text-[#25D366] hover:bg-[#25D366]/10 text-xs"
+                onClick={() => {
+                  const lastVisit = report?.checkin_history?.[0]?.checkin_time;
+                  const dateStr = lastVisit ? new Date(lastVisit).toLocaleDateString('en-IN') : null;
+                  openWhatsApp(patient.phone, followUpReminderMsg(patient.name, dateStr));
+                }}
+                data-testid="wa-followup-msg"
+              >
+                <Calendar className="w-3 h-3 mr-1.5" /> Follow-up Reminder
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full border-[#25D366] text-[#25D366] hover:bg-[#25D366]/10 text-xs"
+                onClick={() => {
+                  const lastDiag = report?.prescriptions?.[0]?.diagnosis;
+                  openWhatsApp(patient.phone, postDischargeDietMsg(patient.name, lastDiag));
+                }}
+                data-testid="wa-diet-msg"
+              >
+                <FileText className="w-3 h-3 mr-1.5" /> Diet Instructions
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full border-[#25D366] text-[#25D366] hover:bg-[#25D366]/10 text-xs"
+                onClick={() => {
+                  const meds = report?.prescriptions?.[0]?.items?.map(i => i.name) || [];
+                  openWhatsApp(patient.phone, medicineRefillMsg(patient.name, meds));
+                }}
+                data-testid="wa-medicine-msg"
+              >
+                <Pill className="w-3 h-3 mr-1.5" /> Medicine Refill
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="prescriptions" className="space-y-6">

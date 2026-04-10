@@ -1,0 +1,101 @@
+{
+  "summary": "WhatsApp messaging feature (REQ-6) fully tested. All backend APIs include patient_phone field. All frontend WhatsApp buttons present and functional. Phone formatting utility works correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Backend: POST /api/appointments returns patient_phone field",
+    "Backend: GET /api/appointments returns patient_phone field in all appointments",
+    "Backend: POST /api/therapy-schedules returns patient_phone field",
+    "Backend: GET /api/therapy-schedules returns patient_phone field in all schedules",
+    "Backend: Patients have phone numbers for WhatsApp messaging",
+    "Backend: Patient report provides context for WhatsApp messages (prescriptions, checkin_history)",
+    "Phone Formatting: 10-digit number adds 91 prefix correctly",
+    "Phone Formatting: 12-digit number with 91 prefix unchanged",
+    "Phone Formatting: 11-digit number with 0 prefix formatted correctly",
+    "Phone Formatting: Number with spaces formatted correctly",
+    "Phone Formatting: Number with dashes formatted correctly",
+    "Phone Formatting: Number with + prefix formatted correctly",
+    "Phone Formatting: Empty phone returns null",
+    "Frontend: Patient Details page shows WhatsApp Quick Messages section",
+    "Frontend: Patient Details page has 4 WhatsApp buttons (General Message, Follow-up Reminder, Diet Instructions, Medicine Refill)",
+    "Frontend: WhatsApp section shows patient phone number",
+    "Frontend: WhatsApp section has green styling (#25D366)",
+    "Frontend: Appointments page shows WhatsApp reminder button on scheduled appointments",
+    "Frontend: Therapy Scheduling page shows WhatsApp reminder button on scheduled therapy sessions",
+    "Frontend: WhatsApp buttons only appear when patient has phone number",
+    "Frontend: WhatsApp buttons only appear on 'scheduled' status items (not completed/cancelled)"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_whatsapp_features.py",
+    "/app/test_reports/pytest/pytest_whatsapp.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_whatsapp_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "100% (all WhatsApp UI elements verified)"
+  },
+  "test_credentials": {
+    "admin": "admin@ayurcare.com / admin1234"
+  },
+  "seed_data_creation": "Created test appointment and therapy schedule to verify WhatsApp buttons",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "WhatsApp messaging feature fully functional. Uses wa.me click-to-chat links (no API needed). Phone formatting adds India country code (91) to 10-digit numbers. WhatsApp buttons appear on: Patient Details page (4 buttons), Appointments page (reminder button on scheduled appointments), Therapy Scheduling page (reminder button on scheduled sessions). Buttons only show when patient has phone number and status is 'scheduled'.",
+  "features_verified": {
+    "whatsapp_utility": {
+      "status": "WORKING",
+      "file": "/app/frontend/src/utils/whatsapp.js",
+      "functions": [
+        "formatPhoneForWhatsApp - formats phone to 91XXXXXXXXXX",
+        "getWhatsAppLink - generates wa.me URL with encoded message",
+        "openWhatsApp - opens WhatsApp in new tab",
+        "appointmentReminderMsg - appointment reminder template",
+        "therapyReminderMsg - therapy session reminder template",
+        "followUpReminderMsg - follow-up reminder template",
+        "postDischargeDietMsg - diet instructions template",
+        "medicineRefillMsg - medicine refill reminder template",
+        "generalMsg - general message template"
+      ]
+    },
+    "patient_details_whatsapp": {
+      "status": "WORKING",
+      "location": "/app/frontend/src/pages/PatientDetails.js lines 447-510",
+      "buttons": [
+        "General Message (data-testid: wa-general-msg)",
+        "Follow-up Reminder (data-testid: wa-followup-msg)",
+        "Diet Instructions (data-testid: wa-diet-msg)",
+        "Medicine Refill (data-testid: wa-medicine-msg)"
+      ],
+      "styling": "Green border (#25D366), green text, rounded-full buttons"
+    },
+    "appointments_whatsapp": {
+      "status": "WORKING",
+      "location": "/app/frontend/src/pages/Appointments.js lines 286-306",
+      "button": "WhatsApp reminder icon button (data-testid: wa-remind-{id})",
+      "condition": "Only shows when apt.status === 'scheduled' AND apt.patient_phone exists"
+    },
+    "therapy_scheduling_whatsapp": {
+      "status": "WORKING",
+      "location": "/app/frontend/src/pages/TherapyScheduling.js lines 369-375",
+      "button": "WhatsApp reminder button (data-testid: wa-therapy-{id})",
+      "condition": "Only shows when s.status === 'scheduled' AND s.patient_phone exists"
+    },
+    "backend_patient_phone": {
+      "status": "WORKING",
+      "appointments": "patient_phone field added to appointment_doc (server.py line 1060)",
+      "therapy_schedules": "patient_phone field added to schedule_doc (server.py line 2730)",
+      "response_model": "AppointmentResponse includes patient_phone (server.py line 161)"
+    }
+  }
+}
