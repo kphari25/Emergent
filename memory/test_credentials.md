@@ -1,6 +1,6 @@
 # Test Credentials
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@ayurcare.com | admin1234 |
-| Doctor | dr.sharma@ayurcare.com | doctor123 |
+## Admin Account
+- Email: admin@ayurcare.com
+- Password: admin1234
+- Role: admin
