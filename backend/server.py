@@ -20,13 +20,26 @@ import io
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# MongoDB connection - graceful handling for deployment
+mongo_url = os.environ.get('MONGO_URL', '')
+if not mongo_url:
+    print("WARNING: MONGO_URL not set. Database features will not work.")
+    mongo_url = 'mongodb://localhost:27017'
+
+try:
+    client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
+    db_name = os.environ.get('DB_NAME', 'tatva_ayurved')
+    db = client[db_name]
+    print(f"MongoDB client initialized for database: {db_name}")
+except Exception as e:
+    print(f"ERROR initializing MongoDB client: {e}")
+    client = AsyncIOMotorClient('mongodb://localhost:27017')
+    db = client['tatva_ayurved']
 
 # JWT Configuration
-JWT_SECRET = os.environ['JWT_SECRET']
+JWT_SECRET = os.environ.get('JWT_SECRET', 'change-this-secret-in-production')
+if JWT_SECRET == 'change-this-secret-in-production':
+    print("WARNING: Using default JWT_SECRET. Set JWT_SECRET environment variable for production.")
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION_HOURS = 24
 
