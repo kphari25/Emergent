@@ -1,5 +1,6 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -32,6 +33,35 @@ JWT_EXPIRATION_HOURS = 24
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 security = HTTPBearer()
+
+# Global exception handler - ensures CORS headers are always sent
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    origin = request.headers.get("origin", "*")
+    cors_origins_env = os.environ.get('CORS_ORIGINS', '*')
+    allowed_origin = "*"
+    if cors_origins_env != '*':
+        origins_list = [o.strip() for o in cors_origins_env.split(',')]
+        if origin in origins_list:
+            allowed_origin = origin
+    
+    headers = {
+        "Access-Control-Allow-Origin": allowed_origin,
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
+    
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=headers
+        )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"},
+        headers=headers
+    )
 
 @app.get("/api/health")
 async def health_check():
