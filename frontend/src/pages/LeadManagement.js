@@ -24,6 +24,56 @@ const STATUS_CONFIG = {
   lost: { label: 'Lost', color: 'bg-red-100 text-red-700', icon: AlertTriangle }
 };
 
+const LeadForm = ({ data, setData, onSubmit, label }) => (
+  <form onSubmit={onSubmit} className="space-y-4 mt-4">
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Name *</Label>
+        <Input value={data.name} onChange={e => setData({ ...data, name: e.target.value })} required className="rounded-xl" data-testid="lead-name-input" />
+      </div>
+      <div className="space-y-2">
+        <Label>Phone *</Label>
+        <Input value={data.phone} onChange={e => setData({ ...data, phone: e.target.value })} required className="rounded-xl" data-testid="lead-phone-input" />
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Email</Label>
+        <Input type="email" value={data.email} onChange={e => setData({ ...data, email: e.target.value })} className="rounded-xl" />
+      </div>
+      <div className="space-y-2">
+        <Label>Source</Label>
+        <Select value={data.source} onValueChange={v => setData({ ...data, source: v })}>
+          <SelectTrigger className="rounded-xl" data-testid="lead-source-select"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {leadSources.map(s => <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Inquiry Type</Label>
+        <Select value={data.inquiry_type} onValueChange={v => setData({ ...data, inquiry_type: v })}>
+          <SelectTrigger className="rounded-xl" data-testid="lead-inquiry-select"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {inquiryTypes.map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Follow-up Date</Label>
+        <Input type="date" value={data.follow_up_date} onChange={e => setData({ ...data, follow_up_date: e.target.value })} className="rounded-xl" data-testid="lead-followup-input" />
+      </div>
+    </div>
+    <div className="space-y-2">
+      <Label>Notes</Label>
+      <Textarea value={data.notes} onChange={e => setData({ ...data, notes: e.target.value })} className="rounded-xl" placeholder="Inquiry details, special requests..." />
+    </div>
+    <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="submit-lead-btn">{label}</Button>
+  </form>
+);
+
 export default function LeadManagement() {
   const { getAuthHeaders } = useAuth();
   const [leads, setLeads] = useState([]);
@@ -107,56 +157,6 @@ export default function LeadManagement() {
   const statusCounts = leads.reduce((acc, l) => { acc[l.status] = (acc[l.status] || 0) + 1; return acc; }, {});
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="spinner"></div></div>;
-
-  const LeadForm = ({ data, setData, onSubmit, label }) => (
-    <form onSubmit={onSubmit} className="space-y-4 mt-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Name *</Label>
-          <Input value={data.name} onChange={e => setData({ ...data, name: e.target.value })} required className="rounded-xl" data-testid="lead-name-input" />
-        </div>
-        <div className="space-y-2">
-          <Label>Phone *</Label>
-          <Input value={data.phone} onChange={e => setData({ ...data, phone: e.target.value })} required className="rounded-xl" data-testid="lead-phone-input" />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Email</Label>
-          <Input type="email" value={data.email} onChange={e => setData({ ...data, email: e.target.value })} className="rounded-xl" />
-        </div>
-        <div className="space-y-2">
-          <Label>Source</Label>
-          <Select value={data.source} onValueChange={v => setData({ ...data, source: v })}>
-            <SelectTrigger className="rounded-xl" data-testid="lead-source-select"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {leadSources.map(s => <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Inquiry Type</Label>
-          <Select value={data.inquiry_type} onValueChange={v => setData({ ...data, inquiry_type: v })}>
-            <SelectTrigger className="rounded-xl" data-testid="lead-inquiry-select"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {inquiryTypes.map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Follow-up Date</Label>
-          <Input type="date" value={data.follow_up_date} onChange={e => setData({ ...data, follow_up_date: e.target.value })} className="rounded-xl" data-testid="lead-followup-input" />
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label>Notes</Label>
-        <Textarea value={data.notes} onChange={e => setData({ ...data, notes: e.target.value })} className="rounded-xl" placeholder="Inquiry details, special requests..." />
-      </div>
-      <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="submit-lead-btn">{label}</Button>
-    </form>
-  );
 
   return (
     <div className="animate-fade-in" data-testid="leads-page">

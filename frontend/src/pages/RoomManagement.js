@@ -26,6 +26,85 @@ const floors = ['Ground', '1st Floor', '2nd Floor', '3rd Floor'];
 
 const getRoomTypeColor = (type) => roomTypes.find(r => r.value === type)?.color || 'bg-gray-100 text-gray-700 border-gray-200';
 
+const RoomForm = ({ data, setData, onSubmit, label }) => (
+  <form onSubmit={onSubmit} className="space-y-4 mt-4">
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Room Number</Label>
+        <Input value={data.room_number} onChange={e => setData({ ...data, room_number: e.target.value })} required className="rounded-xl" data-testid="room-number-input" />
+      </div>
+      <div className="space-y-2">
+        <Label>Room Type</Label>
+        <Select value={data.room_type} onValueChange={v => setData({ ...data, room_type: v })}>
+          <SelectTrigger className="rounded-xl" data-testid="room-type-select"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {roomTypes.map(rt => <SelectItem key={rt.value} value={rt.value}>{rt.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Floor</Label>
+        <Select value={data.floor} onValueChange={v => setData({ ...data, floor: v })}>
+          <SelectTrigger className="rounded-xl" data-testid="room-floor-select"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {floors.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Daily Rate (INR)</Label>
+        <Input type="number" value={data.daily_rate} onChange={e => setData({ ...data, daily_rate: e.target.value })} required className="rounded-xl" data-testid="room-rate-input" />
+      </div>
+    </div>
+    <div className="space-y-2">
+      <Label>Description (Optional)</Label>
+      <Input value={data.description} onChange={e => setData({ ...data, description: e.target.value })} className="rounded-xl" placeholder="e.g., AC, Attached bathroom" />
+    </div>
+    <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="submit-room-btn">{label}</Button>
+  </form>
+);
+
+const PackageForm = ({ data, setData, onSubmit, label }) => (
+  <form onSubmit={onSubmit} className="space-y-4 mt-4">
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Package Name</Label>
+        <Input value={data.name} onChange={e => setData({ ...data, name: e.target.value })} required className="rounded-xl" placeholder="e.g., 7-Day Panchakarma" data-testid="pkg-name-input" />
+      </div>
+      <div className="space-y-2">
+        <Label>Duration (Days)</Label>
+        <Input type="number" value={data.duration_days} onChange={e => setData({ ...data, duration_days: e.target.value })} required className="rounded-xl" data-testid="pkg-duration-input" />
+      </div>
+    </div>
+    <div className="space-y-2">
+      <Label>Therapies (comma separated)</Label>
+      <Input value={data.therapies} onChange={e => setData({ ...data, therapies: e.target.value })} className="rounded-xl" placeholder="Abhyanga, Shirodhara, Pizhichil" data-testid="pkg-therapies-input" />
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Room Type</Label>
+        <Select value={data.room_type} onValueChange={v => setData({ ...data, room_type: v })}>
+          <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {roomTypes.map(rt => <SelectItem key={rt.value} value={rt.value}>{rt.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Total Cost (INR)</Label>
+        <Input type="number" value={data.total_cost} onChange={e => setData({ ...data, total_cost: e.target.value })} required className="rounded-xl" data-testid="pkg-cost-input" />
+      </div>
+    </div>
+    <div className="space-y-2">
+      <Label>Description</Label>
+      <Textarea value={data.description} onChange={e => setData({ ...data, description: e.target.value })} className="rounded-xl" placeholder="Package details and inclusions" />
+    </div>
+    <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="submit-pkg-btn">{label}</Button>
+  </form>
+);
+
 export default function RoomManagement() {
   const { getAuthHeaders } = useAuth();
   const [overview, setOverview] = useState(null);
@@ -182,85 +261,6 @@ export default function RoomManagement() {
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="spinner"></div></div>;
   }
-
-  const RoomForm = ({ data, setData, onSubmit, label }) => (
-    <form onSubmit={onSubmit} className="space-y-4 mt-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Room Number</Label>
-          <Input value={data.room_number} onChange={e => setData({ ...data, room_number: e.target.value })} required className="rounded-xl" data-testid="room-number-input" />
-        </div>
-        <div className="space-y-2">
-          <Label>Room Type</Label>
-          <Select value={data.room_type} onValueChange={v => setData({ ...data, room_type: v })}>
-            <SelectTrigger className="rounded-xl" data-testid="room-type-select"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {roomTypes.map(rt => <SelectItem key={rt.value} value={rt.value}>{rt.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Floor</Label>
-          <Select value={data.floor} onValueChange={v => setData({ ...data, floor: v })}>
-            <SelectTrigger className="rounded-xl" data-testid="room-floor-select"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {floors.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Daily Rate (INR)</Label>
-          <Input type="number" value={data.daily_rate} onChange={e => setData({ ...data, daily_rate: e.target.value })} required className="rounded-xl" data-testid="room-rate-input" />
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label>Description (Optional)</Label>
-        <Input value={data.description} onChange={e => setData({ ...data, description: e.target.value })} className="rounded-xl" placeholder="e.g., AC, Attached bathroom" />
-      </div>
-      <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="submit-room-btn">{label}</Button>
-    </form>
-  );
-
-  const PackageForm = ({ data, setData, onSubmit, label }) => (
-    <form onSubmit={onSubmit} className="space-y-4 mt-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Package Name</Label>
-          <Input value={data.name} onChange={e => setData({ ...data, name: e.target.value })} required className="rounded-xl" placeholder="e.g., 7-Day Panchakarma" data-testid="pkg-name-input" />
-        </div>
-        <div className="space-y-2">
-          <Label>Duration (Days)</Label>
-          <Input type="number" value={data.duration_days} onChange={e => setData({ ...data, duration_days: e.target.value })} required className="rounded-xl" data-testid="pkg-duration-input" />
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label>Therapies (comma separated)</Label>
-        <Input value={data.therapies} onChange={e => setData({ ...data, therapies: e.target.value })} className="rounded-xl" placeholder="Abhyanga, Shirodhara, Pizhichil" data-testid="pkg-therapies-input" />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Room Type</Label>
-          <Select value={data.room_type} onValueChange={v => setData({ ...data, room_type: v })}>
-            <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {roomTypes.map(rt => <SelectItem key={rt.value} value={rt.value}>{rt.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Total Cost (INR)</Label>
-          <Input type="number" value={data.total_cost} onChange={e => setData({ ...data, total_cost: e.target.value })} required className="rounded-xl" data-testid="pkg-cost-input" />
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label>Description</Label>
-        <Textarea value={data.description} onChange={e => setData({ ...data, description: e.target.value })} className="rounded-xl" placeholder="Package details and inclusions" />
-      </div>
-      <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="submit-pkg-btn">{label}</Button>
-    </form>
-  );
 
   return (
     <div className="animate-fade-in" data-testid="rooms-page">

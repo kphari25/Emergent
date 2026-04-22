@@ -19,6 +19,68 @@ const departments = ['Ayurveda', 'Panchakarma', 'Pharmacy', 'Reception', 'Admini
 const roles = ['doctor', 'nurse', 'receptionist', 'pharmacist', 'accountant', 'therapist', 'manager', 'other'];
 const leaveTypes = ['casual', 'sick', 'earned', 'other'];
 
+const StaffForm = ({ data, setData, onSubmit, submitLabel }) => (
+  <form onSubmit={onSubmit} className="space-y-4 mt-4">
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Full Name</Label>
+        <Input value={data.name} onChange={(e) => setData({ ...data, name: e.target.value })} required className="rounded-xl" data-testid="staff-name-input" />
+      </div>
+      <div className="space-y-2">
+        <Label>Email</Label>
+        <Input type="email" value={data.email} onChange={(e) => setData({ ...data, email: e.target.value })} required className="rounded-xl" data-testid="staff-email-input" />
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Phone</Label>
+        <Input value={data.phone} onChange={(e) => setData({ ...data, phone: e.target.value })} required className="rounded-xl" data-testid="staff-phone-input" />
+      </div>
+      <div className="space-y-2">
+        <Label>Role</Label>
+        <Select value={data.role} onValueChange={(v) => setData({ ...data, role: v })}>
+          <SelectTrigger className="rounded-xl" data-testid="staff-role-select"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {roles.map(r => (<SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Department</Label>
+        <Select value={data.department} onValueChange={(v) => setData({ ...data, department: v })}>
+          <SelectTrigger className="rounded-xl" data-testid="staff-department-select"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {departments.map(d => (<SelectItem key={d} value={d}>{d}</SelectItem>))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Designation</Label>
+        <Input value={data.designation} onChange={(e) => setData({ ...data, designation: e.target.value })} required className="rounded-xl" placeholder="e.g., Senior Doctor" data-testid="staff-designation-input" />
+      </div>
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label>Monthly Salary (₹)</Label>
+        <Input type="number" value={data.salary} onChange={(e) => setData({ ...data, salary: e.target.value })} required className="rounded-xl" data-testid="staff-salary-input" />
+      </div>
+      <div className="space-y-2">
+        <Label>Join Date</Label>
+        <Input type="date" value={data.join_date} onChange={(e) => setData({ ...data, join_date: e.target.value })} required className="rounded-xl" data-testid="staff-joindate-input" />
+      </div>
+    </div>
+    <div className="space-y-2">
+      <Label>Address (Optional)</Label>
+      <Textarea value={data.address} onChange={(e) => setData({ ...data, address: e.target.value })} className="rounded-xl" />
+    </div>
+    <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="submit-staff-btn">
+      {submitLabel}
+    </Button>
+  </form>
+);
+
 export default function HR() {
   const { getAuthHeaders } = useAuth();
   const [staff, setStaff] = useState([]);
@@ -208,68 +270,6 @@ export default function HR() {
       </div>
     );
   }
-
-  const StaffForm = ({ data, setData, onSubmit, submitLabel }) => (
-    <form onSubmit={onSubmit} className="space-y-4 mt-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Full Name</Label>
-          <Input value={data.name} onChange={(e) => setData({ ...data, name: e.target.value })} required className="rounded-xl" data-testid="staff-name-input" />
-        </div>
-        <div className="space-y-2">
-          <Label>Email</Label>
-          <Input type="email" value={data.email} onChange={(e) => setData({ ...data, email: e.target.value })} required className="rounded-xl" data-testid="staff-email-input" />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Phone</Label>
-          <Input value={data.phone} onChange={(e) => setData({ ...data, phone: e.target.value })} required className="rounded-xl" data-testid="staff-phone-input" />
-        </div>
-        <div className="space-y-2">
-          <Label>Role</Label>
-          <Select value={data.role} onValueChange={(v) => setData({ ...data, role: v })}>
-            <SelectTrigger className="rounded-xl" data-testid="staff-role-select"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {roles.map(r => (<SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Department</Label>
-          <Select value={data.department} onValueChange={(v) => setData({ ...data, department: v })}>
-            <SelectTrigger className="rounded-xl" data-testid="staff-department-select"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {departments.map(d => (<SelectItem key={d} value={d}>{d}</SelectItem>))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Designation</Label>
-          <Input value={data.designation} onChange={(e) => setData({ ...data, designation: e.target.value })} required className="rounded-xl" placeholder="e.g., Senior Doctor" data-testid="staff-designation-input" />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Monthly Salary (₹)</Label>
-          <Input type="number" value={data.salary} onChange={(e) => setData({ ...data, salary: e.target.value })} required className="rounded-xl" data-testid="staff-salary-input" />
-        </div>
-        <div className="space-y-2">
-          <Label>Join Date</Label>
-          <Input type="date" value={data.join_date} onChange={(e) => setData({ ...data, join_date: e.target.value })} required className="rounded-xl" data-testid="staff-joindate-input" />
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label>Address (Optional)</Label>
-        <Textarea value={data.address} onChange={(e) => setData({ ...data, address: e.target.value })} className="rounded-xl" />
-      </div>
-      <Button type="submit" className="w-full bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="submit-staff-btn">
-        {submitLabel}
-      </Button>
-    </form>
-  );
 
   return (
     <div className="animate-fade-in" data-testid="hr-page">
