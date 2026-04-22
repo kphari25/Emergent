@@ -358,7 +358,10 @@ async def register(user: UserCreate):
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
-    user = await db.users.find_one({'email': credentials.email}, {'_id': 0})
+    try:
+        user = await db.users.find_one({'email': credentials.email}, {'_id': 0})
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Database connection error: {str(e)}")
     if not user or not verify_password(credentials.password, user['password']):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
@@ -2944,12 +2947,22 @@ async def get_patient_billing_summary(patient_id: str, current_user: dict = Depe
 # Include router AFTER all routes are defined
 app.include_router(api_router)
 
+# CORS Configuration - handle credentials properly
+cors_origins_env = os.environ.get('CORS_ORIGINS', '*')
+if cors_origins_env == '*':
+    cors_origins = ["*"]
+    cors_credentials = False
+else:
+    cors_origins = [o.strip() for o in cors_origins_env.split(',') if o.strip()]
+    cors_credentials = True
+
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_credentials=cors_credentials,
+    allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 logging.basicConfig(
