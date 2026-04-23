@@ -17,6 +17,7 @@ Build a comprehensive Ayurvedic hospital management program "Tatva Ayurved" with
 - REQ-4 Therapy Scheduling, REQ-5 Consolidated Billing with Pharmacy Linkage
 - WhatsApp click-to-chat (6 templates across Patient Details, Appointments, Therapy)
 - Deployment guides: Windows Server, Vercel+Render+Atlas, scripts (backup/healthcheck/install)
+- **Profit & Loss Statement tab** (Feb 2026) — real-time income-statement view under Reports → P&L. Auto-aggregates revenue (patient billing + medicine sales + medicine profit) and expenses (medicine purchase, mess, electricity, salary from HR, misc) with date-range filter and net profit/loss bottom line.
 
 ## Phase 1 AI Agents (Feb 2026)
 - **Intelligent Intake Agent** — multi-turn conversational history collection (staff-initiated + patient-facing public link with token). Auto-summarises into structured JSON on submit.
