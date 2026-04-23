@@ -196,7 +196,7 @@ def register_ai_router(app, db, current_user_dep):
 
     @ai_router.post("/intake/message")
     async def intake_message(req: IntakeMessageRequest, user: dict = Depends(current_user_dep)):
-        return await _handle_intake_message(req, allow_public=False)
+        return await _handle_intake_message(req, allow_public=False, user=user)
 
     @ai_router.post("/intake/message-public")
     async def intake_message_public(req: IntakeMessageRequest):
@@ -204,13 +204,16 @@ def register_ai_router(app, db, current_user_dep):
             raise HTTPException(status_code=400, detail="public_token required")
         return await _handle_intake_message(req, allow_public=True)
 
-    async def _handle_intake_message(req: IntakeMessageRequest, allow_public: bool):
+    async def _handle_intake_message(req: IntakeMessageRequest, allow_public: bool, user: Optional[dict] = None):
         session = await db.intake_sessions.find_one({'id': req.session_id}, {'_id': 0})
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         if allow_public:
             if session['mode'] != 'patient_self' or req.public_token != session.get('public_token'):
                 raise HTTPException(status_code=403, detail="Unauthorised")
+        else:
+            if user and session.get('created_by') != user.get('id') and user.get('role') not in ('admin', 'doctor'):
+                raise HTTPException(status_code=403, detail="Not your session")
         if session['status'] != 'active':
             raise HTTPException(status_code=400, detail="Session already submitted")
 
@@ -242,7 +245,7 @@ def register_ai_router(app, db, current_user_dep):
 
     @ai_router.post("/intake/submit")
     async def intake_submit(req: SubmitIntakeRequest, user: dict = Depends(current_user_dep)):
-        return await _handle_intake_submit(req, allow_public=False)
+        return await _handle_intake_submit(req, allow_public=False, user=user)
 
     @ai_router.post("/intake/submit-public")
     async def intake_submit_public(req: SubmitIntakeRequest):
@@ -250,13 +253,17 @@ def register_ai_router(app, db, current_user_dep):
             raise HTTPException(status_code=400, detail="public_token required")
         return await _handle_intake_submit(req, allow_public=True)
 
-    async def _handle_intake_submit(req: SubmitIntakeRequest, allow_public: bool):
+    async def _handle_intake_submit(req: SubmitIntakeRequest, allow_public: bool, user: Optional[dict] = None):
         session = await db.intake_sessions.find_one({'id': req.session_id}, {'_id': 0})
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         if allow_public:
             if session['mode'] != 'patient_self' or req.public_token != session.get('public_token'):
                 raise HTTPException(status_code=403, detail="Unauthorised")
+        else:
+            # Staff path: creator, or any admin/doctor
+            if user and session.get('created_by') != user.get('id') and user.get('role') not in ('admin', 'doctor'):
+                raise HTTPException(status_code=403, detail="Not your session")
 
         transcript = "\n".join([f"{m['role'].upper()}: {m['text']}" for m in session.get('messages', [])])
         summariser = _new_chat(f"{req.session_id}-summary", (

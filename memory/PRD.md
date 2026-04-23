@@ -1,47 +1,51 @@
 # Tatva Ayurved - Hospital Management System PRD
 
 ## Original Problem Statement
-Build a comprehensive Ayurvedic hospital management program "Tatva Ayurved" with Patient Management (IP/OP), Inventory Management, Billing (GST, A4 invoices), Reporting, HR Module, and RBAC. Extended with Therapy Scheduling, Consolidated Billing, CRM, and WhatsApp messaging.
+Build a comprehensive Ayurvedic hospital management program "Tatva Ayurved" with Patient Management (IP/OP), Inventory Management, Billing (GST, A4 invoices), Reporting, HR Module, and RBAC. Extended with Therapy Scheduling, Consolidated Billing, CRM, WhatsApp messaging, and **Phase 1 AI Agents** (Intake, Prakriti/Vikriti analysis with vision, Ayurvedic Knowledge, Doctor Review Queue).
 
 ## Tech Stack
-- Backend: FastAPI + MongoDB (Motor) + PyJWT
+- Backend: FastAPI + MongoDB (Motor) + PyJWT + emergentintegrations (Claude Sonnet 4.5, Gemini 2.5 Pro vision)
 - Frontend: React + Tailwind CSS + Shadcn/UI + Recharts
 - Auth: JWT with role-based access (Admin, Doctor, Front Desk, Therapist, HR)
 
 ## Completed Features
 - Authentication & RBAC with User Management (Admin only)
 - Patient Management: CRUD, check-in/out, CSV/Excel import, Auto-PID, Prakriti profiles
-- Inventory Management: CRUD, edit, import, sale price auto-calculation
-- Billing: IP/OP tabs, 18% GST, A4 printable Tax Invoice with Tatva Ayurved logo
-- Consolidated Billing: Patient summary (therapy + room + mess), advance deposits, apply advance to bills
-- HR: Staff management, leave tracking, salary
-- Mess Management: Meal sections, pricing, patient meal assignments
-- Queue Dashboard: Kanban layout, token system, priority flagging
-- Room Management: Floor maps, OP-to-IP conversion, packages
-- Executive Dashboard: Revenue, occupancy, OP/IP counts
-- Lead Management CRM: Sales tracking
-- Feedback: Star ratings, escalation
-- REQ-4: Therapy Scheduling - Types CRUD, session scheduling, gender validation, conflict detection, status workflow
-- REQ-5: Consolidated Billing - Advance deposits, billing summary, auto-fill, multi-mode payments
-- Logo Integration: Custom Tatva Ayurved logo on sidebar, mobile header, printable invoices
-- **WhatsApp Messaging** - Click-to-chat (wa.me links) on Patient Details (4 templates), Appointments (reminders), Therapy Scheduling (session reminders)
-- Deployment guides: Self-hosting, Windows install
+- Inventory, IP/OP Billing (18% GST, A4 Tax Invoice with logo), Consolidated Billing with Advances
+- HR, Mess, Live Queue, Room Management (with floor maps + packages)
+- Executive Dashboard, Lead Management CRM, Feedback (star ratings)
+- REQ-4 Therapy Scheduling, REQ-5 Consolidated Billing with Pharmacy Linkage
+- WhatsApp click-to-chat (6 templates across Patient Details, Appointments, Therapy)
+- Deployment guides: Windows Server, Vercel+Render+Atlas, scripts (backup/healthcheck/install)
 
-## WhatsApp Message Templates
-1. Appointment Reminder - Date, time, treatment, doctor
-2. Therapy Session Reminder - Therapy name, date, time, duration
-3. Follow-up Reminder - Last visit date, recommendation to schedule
-4. Post-discharge Diet Instructions - Ayurvedic diet guidelines
-5. Medicine Refill Reminder - List of medicines due for refill
-6. General Message - Open-ended communication
+## Phase 1 AI Agents (Feb 2026)
+- **Intelligent Intake Agent** — multi-turn conversational history collection (staff-initiated + patient-facing public link with token). Auto-summarises into structured JSON on submit.
+- **Prakriti/Vikriti Analysis Agent** — accepts intake text + optional tongue/eye images (JPEG/PNG/WEBP), returns dosha scores, dominant constitution/imbalance, reasoning, treatment lines, confidence. Text-only uses Claude Sonnet 4.5; with images routes to Gemini 2.5 Pro.
+- **Ayurvedic Knowledge Agent** — Q&A grounded in classical Samhitas with structured citations format. LLM-seeded baseline; PDF corpus upload is P2.
+- **Doctor Review Queue** — all AI outputs land here with status `pending_review`. Admin/doctor can approve (writes `prakriti_assessment` to patient chart) or reject. Approved results also persist assessor name + timestamp.
+- **Public Patient Intake** — shareable `/intake/:sessionId?token=xxx` URL, no auth, phone-friendly chat UI, submits back to review queue.
+
+## Key Endpoints (AI)
+- POST /api/ai/intake/{start,message,submit,start-public,message-public,submit-public}
+- GET /api/ai/intake/sessions, /api/ai/intake/session/:id, /api/ai/intake/session-public/:id?token=
+- POST /api/ai/prakriti/analyze, GET /api/ai/prakriti/analyses, POST /api/ai/prakriti/analysis/:id/review
+- POST /api/ai/knowledge/ask, GET /api/ai/knowledge/history
+- GET /api/ai/review-queue
 
 ## Upcoming (P1)
+- **Phase 2 AI**: Personalized Treatment Agent, Panchakarma Management Agent, Smart Scheduling Agent
 - Payroll reminders for admin
 
 ## Backlog (P2)
+- **Phase 3 AI**: Pharmacy & Supply Chain Agent, Billing & Claims Agent
+- **Phase 4 AI**: Follow-up & Compliance Agent (needs Twilio), Virtual Wellness Coach, Nadi Pariksha Interpreter (manual pulse data)
+- Samhita PDF knowledge corpus ingestion
 - REQ-1.6: Document Vault (file uploads)
 - Frontend accessibility fixes (ARIA labels)
-- server.py modularization (2900+ lines monolith)
+- server.py modularization (3000+ lines monolith)
 
 ## Credentials
 - Admin: admin@ayurcare.com / admin1234
+
+## Integrations
+- EMERGENT_LLM_KEY (universal key) in /app/backend/.env — powers Claude Sonnet 4.5 + Gemini 2.5 Pro via emergentintegrations library

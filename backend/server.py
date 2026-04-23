@@ -146,6 +146,9 @@ class PatientResponse(BaseModel):
     admission_date: Optional[str] = None
     priority: Optional[str] = "normal"
     queue_status: Optional[str] = None
+    prakriti_assessment: Optional[dict] = None
+    prakriti_assessment_at: Optional[str] = None
+    prakriti_assessment_by: Optional[str] = None
     created_at: str
 
 class CheckInRequest(BaseModel):

@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
   MessageCircle,
@@ -251,7 +251,10 @@ const IntakeAgent = () => {
       {/* Share link dialog */}
       <Dialog open={shareLinkOpen} onOpenChange={setShareLinkOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Share Intake Link with Patient</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Share Intake Link with Patient</DialogTitle>
+            <DialogDescription>The patient can complete the intake from their own device using this secure link.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-3 mt-2">
             <p className="text-sm text-[#6B7280]">Send this link to the patient. They can complete the intake from their own device at their own pace.</p>
             <div className="flex gap-2">
@@ -601,7 +604,10 @@ const ReviewQueue = () => {
       {/* Review Dialog */}
       <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setReviewerNotes(''); } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Review Prakriti Analysis — {selected?.patient_name}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Review Prakriti Analysis — {selected?.patient_name}</DialogTitle>
+            <DialogDescription>Review the AI-generated assessment. Approving will save it to the patient's chart; rejecting discards it.</DialogDescription>
+          </DialogHeader>
           {selected && (
             <div className="space-y-4 mt-2">
               <div className="grid grid-cols-2 gap-4 p-3 rounded-xl bg-[#F1F2EF]">
