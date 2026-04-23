@@ -2990,6 +2990,14 @@ async def get_patient_billing_summary(patient_id: str, current_user: dict = Depe
 # Include router AFTER all routes are defined
 app.include_router(api_router)
 
+# Register AI Agents (Phase 1: Intake, Prakriti, Knowledge, Review Queue)
+try:
+    from ai_agents import register_ai_router
+    register_ai_router(app, db, get_current_user)
+    print("AI Agents registered: /api/ai/*")
+except Exception as e:
+    print(f"WARNING: AI Agents not registered: {e}")
+
 # CORS Configuration - handle credentials properly
 cors_origins_env = os.environ.get('CORS_ORIGINS', '*')
 if cors_origins_env == '*':
