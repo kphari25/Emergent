@@ -513,6 +513,8 @@ const ReviewQueue = () => {
   const [queue, setQueue] = useState({ pending_prakriti: [], submitted_intakes: [] });
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [selectedIntake, setSelectedIntake] = useState(null);
+  const [intakeLoading, setIntakeLoading] = useState(false);
   const [reviewerNotes, setReviewerNotes] = useState('');
   const [acting, setActing] = useState(false);
 
@@ -546,6 +548,52 @@ const ReviewQueue = () => {
       fetchQueue();
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Failed');
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const openIntake = async (intakeStub) => {
+    setIntakeLoading(true);
+    setSelectedIntake({ ...intakeStub, messages: [], loading: true });
+    try {
+      const res = await axios.get(`${API_URL}/ai/intake/session/${intakeStub.id}`, { headers: getAuthHeaders() });
+      setSelectedIntake({ ...res.data, loading: false });
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to load intake');
+      setSelectedIntake(null);
+    } finally {
+      setIntakeLoading(false);
+    }
+  };
+
+  const markReviewed = async () => {
+    if (!selectedIntake) return;
+    setActing(true);
+    try {
+      await axios.post(`${API_URL}/ai/intake/session/${selectedIntake.id}/mark-reviewed`, {}, { headers: getAuthHeaders() });
+      toast.success('Intake marked as reviewed');
+      setSelectedIntake(null);
+      fetchQueue();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed');
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const runPrakritiFromIntake = async () => {
+    if (!selectedIntake) return;
+    setActing(true);
+    try {
+      await axios.post(`${API_URL}/ai/prakriti/analyze`, {
+        intake_session_id: selectedIntake.id,
+      }, { headers: getAuthHeaders() });
+      toast.success('Prakriti analysis queued for your review');
+      setSelectedIntake(null);
+      fetchQueue();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to analyse');
     } finally {
       setActing(false);
     }
@@ -586,14 +634,15 @@ const ReviewQueue = () => {
           {queue.submitted_intakes.length === 0 ? (
             <p className="text-sm text-[#6B7280] text-center py-6">No submitted intakes</p>
           ) : (
-            <div className="space-y-2">
+            <div className="grid md:grid-cols-2 gap-3">
               {queue.submitted_intakes.map(s => (
-                <div key={s.id} className="p-3 rounded-xl border border-[#F1F2EF]">
-                  <div className="flex items-center justify-between mb-1">
+                <div key={s.id} className="p-4 rounded-xl border border-[#F1F2EF] hover:border-[#3A5A40]/30 cursor-pointer transition-colors" onClick={() => openIntake(s)} data-testid={`intake-card-${s.id}`}>
+                  <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium">{s.patient_name || 'Unnamed'}</p>
-                    <span className="text-[11px] text-[#6B7280]">{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : ''}</span>
+                    <Badge className="bg-amber-100 text-amber-700 text-[10px]">submitted</Badge>
                   </div>
-                  {s.summary?.chief_complaint && <p className="text-xs text-[#6B7280]">Chief complaint: {typeof s.summary.chief_complaint === 'string' ? s.summary.chief_complaint : JSON.stringify(s.summary.chief_complaint)}</p>}
+                  {s.summary?.chief_complaint && <p className="text-xs text-[#6B7280] line-clamp-2">Chief complaint: {typeof s.summary.chief_complaint === 'string' ? s.summary.chief_complaint : JSON.stringify(s.summary.chief_complaint)}</p>}
+                  <p className="text-[11px] text-[#8B95A1] mt-1">{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : ''}</p>
                 </div>
               ))}
             </div>
@@ -640,6 +689,84 @@ const ReviewQueue = () => {
                   <ThumbsUp className="w-4 h-4 mr-1" /> Approve & Save to Chart
                 </Button>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Intake Review Dialog */}
+      <Dialog open={!!selectedIntake} onOpenChange={(o) => { if (!o) setSelectedIntake(null); }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Intake Review — {selectedIntake?.patient_name || 'Unnamed'}</DialogTitle>
+            <DialogDescription>Review the patient's intake conversation, trigger a Prakriti analysis, and mark it reviewed.</DialogDescription>
+          </DialogHeader>
+          {selectedIntake && (
+            <div className="space-y-4 mt-2" data-testid="intake-review-dialog">
+              {intakeLoading ? (
+                <div className="flex items-center justify-center py-8"><div className="spinner" /></div>
+              ) : (
+                <>
+                  {/* Metadata */}
+                  <div className="grid grid-cols-3 gap-3 p-3 rounded-xl bg-[#F1F2EF] text-xs">
+                    <div>
+                      <p className="text-[10px] uppercase text-[#6B7280]">Mode</p>
+                      <p className="font-medium capitalize">{selectedIntake.mode?.replace('_', ' ')}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase text-[#6B7280]">Submitted</p>
+                      <p className="font-medium">{selectedIntake.submitted_at ? new Date(selectedIntake.submitted_at).toLocaleString() : '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase text-[#6B7280]">Messages</p>
+                      <p className="font-medium">{selectedIntake.messages?.length || 0}</p>
+                    </div>
+                  </div>
+
+                  {/* Structured summary */}
+                  {selectedIntake.summary && (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#3A5A40] mb-2">AI-generated Summary</p>
+                      <div className="border border-[#F1F2EF] rounded-xl divide-y divide-[#F1F2EF]">
+                        {Object.entries(selectedIntake.summary).map(([k, v]) => (
+                          <div key={k} className="grid grid-cols-3 px-3 py-2 text-sm">
+                            <span className="text-[#6B7280] capitalize text-xs">{k.replace(/_/g, ' ')}</span>
+                            <span className="col-span-2 text-[#1A1C18]">{typeof v === 'string' ? v : Array.isArray(v) ? v.join(', ') : JSON.stringify(v)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Full transcript */}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#3A5A40] mb-2">Full Conversation</p>
+                    <div className="border border-[#F1F2EF] rounded-xl p-3 space-y-2 max-h-[40vh] overflow-y-auto bg-white">
+                      {(selectedIntake.messages || []).map((m, i) => (
+                        <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs whitespace-pre-wrap ${
+                            m.role === 'user'
+                              ? 'bg-[#3A5A40] text-white rounded-br-md'
+                              : 'bg-[#F1F2EF] text-[#1A1C18] rounded-bl-md'
+                          }`}>
+                            {m.text}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-2 justify-end pt-2 border-t border-[#F1F2EF]">
+                    <Button variant="outline" onClick={runPrakritiFromIntake} disabled={acting} className="rounded-full border-[#3A5A40] text-[#3A5A40] hover:bg-[#3A5A40]/10" data-testid="run-prakriti-from-intake-btn">
+                      <Sparkles className="w-4 h-4 mr-1" /> Run Prakriti Analysis
+                    </Button>
+                    <Button onClick={markReviewed} disabled={acting} className="bg-green-600 hover:bg-green-700 rounded-full" data-testid="mark-reviewed-btn">
+                      <Check className="w-4 h-4 mr-1" /> Mark Reviewed
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </DialogContent>

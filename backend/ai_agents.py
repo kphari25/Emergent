@@ -323,6 +323,26 @@ def register_ai_router(app, db, current_user_dep):
             i.pop('public_token', None)
         return items
 
+    @ai_router.post("/intake/session/{session_id}/mark-reviewed")
+    async def mark_intake_reviewed(session_id: str, user: dict = Depends(current_user_dep)):
+        if user.get('role') not in ['admin', 'doctor']:
+            raise HTTPException(status_code=403, detail="Only doctors/admins can mark reviewed")
+        session = await db.intake_sessions.find_one({'id': session_id}, {'_id': 0})
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+        now = datetime.now(timezone.utc).isoformat()
+        await db.intake_sessions.update_one(
+            {'id': session_id},
+            {'$set': {
+                'status': 'reviewed',
+                'reviewed_by': user['id'],
+                'reviewed_by_name': user.get('name'),
+                'reviewed_at': now,
+                'updated_at': now,
+            }}
+        )
+        return {'status': 'reviewed'}
+
     # ==================== PRAKRITI ANALYSIS ====================
 
     @ai_router.post("/prakriti/analyze")
