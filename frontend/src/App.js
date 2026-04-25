@@ -18,6 +18,8 @@ import TherapyScheduling from "@/pages/TherapyScheduling";
 import LeadManagement from "@/pages/LeadManagement";
 import FeedbackPage from "@/pages/FeedbackPage";
 import UserManagement from "@/pages/UserManagement";
+import AIAssist from "@/pages/AIAssist";
+import PublicIntake from "@/pages/PublicIntake";
 import Layout from "@/components/Layout";
 
 // Roles that have restricted access (cannot see HR and Reports)
@@ -93,6 +95,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/intake/:sessionId" element={<PublicIntake />} />
           <Route
             path="/*"
             element={
@@ -111,6 +114,7 @@ function App() {
                     <Route path="mess" element={<Mess />} />
                     <Route path="leads" element={<LeadManagement />} />
                     <Route path="feedback" element={<FeedbackPage />} />
+                    <Route path="ai-assist" element={<AIAssist />} />
                     <Route path="reports" element={<RestrictedRoute><Reports /></RestrictedRoute>} />
                     <Route path="hr" element={<RestrictedRoute><HR /></RestrictedRoute>} />
                     <Route path="users" element={<AdminRoute><UserManagement /></AdminRoute>} />

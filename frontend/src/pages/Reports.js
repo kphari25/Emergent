@@ -24,7 +24,7 @@ const COLORS = {
   loss: '#BC4749'
 };
 
-const expenseCategories = ['utilities', 'maintenance', 'supplies', 'equipment', 'rent', 'other'];
+const expenseCategories = ['electricity', 'mess', 'medicine_purchase', 'utilities', 'maintenance', 'supplies', 'equipment', 'rent', 'misc', 'other'];
 
 export default function Reports() {
   const { getAuthHeaders } = useAuth();
@@ -33,6 +33,9 @@ export default function Reports() {
   const [financialReport, setFinancialReport] = useState(null);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [expenses, setExpenses] = useState([]);
+  const [pnl, setPnl] = useState(null);
+  const [pnlStart, setPnlStart] = useState('');
+  const [pnlEnd, setPnlEnd] = useState('');
   const [loading, setLoading] = useState(true);
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
 
@@ -47,23 +50,35 @@ export default function Reports() {
 
   const fetchReports = async () => {
     try {
-      const [inventoryRes, revenueRes, dashboardRes, financialRes, expensesRes] = await Promise.all([
+      const [inventoryRes, revenueRes, dashboardRes, financialRes, expensesRes, pnlRes] = await Promise.all([
         axios.get(`${API_URL}/reports/inventory-analytics`, { headers: getAuthHeaders() }),
         axios.get(`${API_URL}/reports/revenue`, { headers: getAuthHeaders() }),
         axios.get(`${API_URL}/reports/dashboard`, { headers: getAuthHeaders() }),
         axios.get(`${API_URL}/reports/financial`, { headers: getAuthHeaders() }),
-        axios.get(`${API_URL}/expenses`, { headers: getAuthHeaders() })
+        axios.get(`${API_URL}/expenses`, { headers: getAuthHeaders() }),
+        axios.get(`${API_URL}/reports/pnl`, { headers: getAuthHeaders() })
       ]);
       setInventoryAnalytics(inventoryRes.data);
       setRevenueData(revenueRes.data);
       setDashboardStats(dashboardRes.data);
       setFinancialReport(financialRes.data);
       setExpenses(expensesRes.data);
+      setPnl(pnlRes.data);
     } catch (error) {
       toast.error('Failed to load reports');
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchPnl = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (pnlStart) params.append('start_date', pnlStart);
+      if (pnlEnd) params.append('end_date', pnlEnd);
+      const res = await axios.get(`${API_URL}/reports/pnl?${params.toString()}`, { headers: getAuthHeaders() });
+      setPnl(res.data);
+    } catch { toast.error('Failed to refresh P&L'); }
   };
 
   const handleAddExpense = async (e) => {
@@ -80,6 +95,7 @@ export default function Reports() {
         date: new Date().toISOString().slice(0, 10), vendor: '', notes: ''
       });
       fetchReports();
+      fetchPnl();
     } catch (error) {
       toast.error('Failed to add expense');
     }
@@ -133,12 +149,180 @@ export default function Reports() {
         <p className="page-subtitle">Financial insights, inventory, and revenue analysis</p>
       </div>
 
-      <Tabs defaultValue="financial" className="space-y-6">
+      <Tabs defaultValue="pnl" className="space-y-6">
         <TabsList className="bg-[#DAD7CD]/30">
+          <TabsTrigger value="pnl" data-testid="tab-pnl">P&L Statement</TabsTrigger>
           <TabsTrigger value="financial" data-testid="tab-financial">Financial Report</TabsTrigger>
           <TabsTrigger value="inventory" data-testid="tab-inventory">Inventory Analytics</TabsTrigger>
           <TabsTrigger value="expenses" data-testid="tab-expenses">Expenses</TabsTrigger>
         </TabsList>
+
+        {/* P&L Statement Tab */}
+        <TabsContent value="pnl" className="space-y-6">
+          {/* Date range filter + Add Expense */}
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4" data-testid="pnl-controls">
+            <div className="flex gap-3 items-end">
+              <div>
+                <Label className="text-xs">From</Label>
+                <Input type="date" value={pnlStart} onChange={e => setPnlStart(e.target.value)} className="rounded-xl w-40" data-testid="pnl-start-date" />
+              </div>
+              <div>
+                <Label className="text-xs">To</Label>
+                <Input type="date" value={pnlEnd} onChange={e => setPnlEnd(e.target.value)} className="rounded-xl w-40" data-testid="pnl-end-date" />
+              </div>
+              <Button onClick={fetchPnl} variant="outline" className="rounded-full border-[#3A5A40] text-[#3A5A40] hover:bg-[#3A5A40]/10" data-testid="pnl-apply-btn">Apply</Button>
+              <Button onClick={() => { setPnlStart(''); setPnlEnd(''); fetchPnl(); }} variant="ghost" className="text-xs text-[#6B7280]">Clear</Button>
+            </div>
+            <Button onClick={() => setAddExpenseOpen(true)} className="bg-[#3A5A40] hover:bg-[#344E41] rounded-full" data-testid="pnl-add-expense-btn">
+              <Plus className="w-4 h-4 mr-2" /> Add Expense
+            </Button>
+          </div>
+
+          {/* Top-line summary cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="metric-card card-hover bg-[#3A5A40]/5 border-[#3A5A40]/20" data-testid="pnl-revenue-card">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="metric-label">Total Revenue</p>
+                    <p className="metric-value text-[#3A5A40]">₹{(pnl?.summary?.total_revenue || 0).toLocaleString()}</p>
+                    <p className="text-xs text-[#6B7280] mt-1">Realised (collected) across {pnl?.entries?.bill_count || 0} bills</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-[#3A5A40]/10 flex items-center justify-center"><TrendingUp className="w-6 h-6 text-[#3A5A40]" /></div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="metric-card card-hover bg-[#BC4749]/5 border-[#BC4749]/20" data-testid="pnl-expense-card">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="metric-label">Total Expenses</p>
+                    <p className="metric-value text-[#BC4749]">₹{(pnl?.summary?.total_expense || 0).toLocaleString()}</p>
+                    <p className="text-xs text-[#6B7280] mt-1">{pnl?.entries?.expense_count || 0} manual · {pnl?.entries?.salary_payment_count || 0} salary</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-[#BC4749]/10 flex items-center justify-center"><TrendingDown className="w-6 h-6 text-[#BC4749]" /></div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className={`metric-card card-hover border-2 ${pnl?.summary?.is_profit ? 'bg-[#588157]/5 border-[#588157]/30' : 'bg-[#BC4749]/5 border-[#BC4749]/30'}`} data-testid="pnl-net-card">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="metric-label">{pnl?.summary?.is_profit ? 'Net Profit' : 'Net Loss'}</p>
+                    <p className={`metric-value ${pnl?.summary?.is_profit ? 'text-[#588157]' : 'text-[#BC4749]'}`}>
+                      ₹{Math.abs(pnl?.summary?.net_profit_loss || 0).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-[#6B7280] mt-1">
+                      Margin: {pnl?.summary?.total_revenue ? ((pnl.summary.net_profit_loss / pnl.summary.total_revenue) * 100).toFixed(1) : '0.0'}%
+                    </p>
+                  </div>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${pnl?.summary?.is_profit ? 'bg-[#588157]/10' : 'bg-[#BC4749]/10'}`}>
+                    <Wallet className={`w-6 h-6 ${pnl?.summary?.is_profit ? 'text-[#588157]' : 'text-[#BC4749]'}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Statement-style P&L */}
+          <Card data-testid="pnl-statement-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base" style={{ fontFamily: 'Playfair Display' }}>Profit & Loss Statement</CardTitle>
+              <p className="text-xs text-[#6B7280]">
+                {pnl?.period?.start || pnl?.period?.end
+                  ? `Period: ${pnl.period.start || 'all'} → ${pnl.period.end || 'today'}`
+                  : 'All-time · auto-updated with every bill, salary payment and expense entry'}
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <table className="w-full text-sm" data-testid="pnl-table">
+                <tbody>
+                  {/* REVENUE */}
+                  <tr className="border-b border-[#F1F2EF] bg-[#3A5A40]/5">
+                    <td colSpan={2} className="px-6 py-3 text-xs uppercase font-semibold tracking-wide text-[#3A5A40]">Revenue</td>
+                  </tr>
+                  <tr className="border-b border-[#F1F2EF]">
+                    <td className="px-6 py-2.5 text-[#1A1C18]">Patient Billing (consultations, therapy, room)</td>
+                    <td className="px-6 py-2.5 text-right font-mono">₹{(pnl?.revenue?.patient_billing || 0).toLocaleString()}</td>
+                  </tr>
+                  <tr className="border-b border-[#F1F2EF]">
+                    <td className="px-6 py-2.5 text-[#1A1C18]">Medicine / Pharmacy Sales</td>
+                    <td className="px-6 py-2.5 text-right font-mono">₹{(pnl?.revenue?.medicine_sales || 0).toLocaleString()}</td>
+                  </tr>
+                  <tr className="border-b border-[#F1F2EF]">
+                    <td className="px-6 py-2.5 pl-10 text-[#6B7280] italic text-xs">↳ Profit from medicine sale (sale − COGS)</td>
+                    <td className="px-6 py-2.5 text-right font-mono text-xs text-[#588157]">₹{(pnl?.revenue?.medicine_profit || 0).toLocaleString()}</td>
+                  </tr>
+                  <tr className="border-b-2 border-[#3A5A40]/30 bg-[#3A5A40]/5">
+                    <td className="px-6 py-2.5 font-semibold text-[#3A5A40]">Total Revenue</td>
+                    <td className="px-6 py-2.5 text-right font-mono font-bold text-[#3A5A40]">₹{(pnl?.summary?.total_revenue || 0).toLocaleString()}</td>
+                  </tr>
+
+                  {/* EXPENSES */}
+                  <tr className="border-b border-[#F1F2EF] bg-[#BC4749]/5">
+                    <td colSpan={2} className="px-6 py-3 text-xs uppercase font-semibold tracking-wide text-[#BC4749]">Expenses</td>
+                  </tr>
+                  <tr className="border-b border-[#F1F2EF]">
+                    <td className="px-6 py-2.5 text-[#1A1C18]">Medicine Purchase (stock procurement)</td>
+                    <td className="px-6 py-2.5 text-right font-mono">₹{(pnl?.expenses?.medicine_purchase || 0).toLocaleString()}</td>
+                  </tr>
+                  <tr className="border-b border-[#F1F2EF]">
+                    <td className="px-6 py-2.5 text-[#1A1C18]">Mess Expense</td>
+                    <td className="px-6 py-2.5 text-right font-mono">₹{(pnl?.expenses?.mess || 0).toLocaleString()}</td>
+                  </tr>
+                  <tr className="border-b border-[#F1F2EF]">
+                    <td className="px-6 py-2.5 text-[#1A1C18]">Electricity / Utilities</td>
+                    <td className="px-6 py-2.5 text-right font-mono">₹{(pnl?.expenses?.electricity || 0).toLocaleString()}</td>
+                  </tr>
+                  <tr className="border-b border-[#F1F2EF]">
+                    <td className="px-6 py-2.5 text-[#1A1C18]">Salary (from HR payments)</td>
+                    <td className="px-6 py-2.5 text-right font-mono">₹{(pnl?.expenses?.salary || 0).toLocaleString()}</td>
+                  </tr>
+                  <tr className="border-b border-[#F1F2EF]">
+                    <td className="px-6 py-2.5 text-[#1A1C18]">Miscellaneous Expenses</td>
+                    <td className="px-6 py-2.5 text-right font-mono">₹{(pnl?.expenses?.misc || 0).toLocaleString()}</td>
+                  </tr>
+                  <tr className="border-b-2 border-[#BC4749]/30 bg-[#BC4749]/5">
+                    <td className="px-6 py-2.5 font-semibold text-[#BC4749]">Total Expenses</td>
+                    <td className="px-6 py-2.5 text-right font-mono font-bold text-[#BC4749]">₹{(pnl?.summary?.total_expense || 0).toLocaleString()}</td>
+                  </tr>
+
+                  {/* BOTTOM LINE */}
+                  <tr className={pnl?.summary?.is_profit ? 'bg-[#588157]/10' : 'bg-[#BC4749]/10'}>
+                    <td className="px-6 py-4 text-base font-bold" style={{ fontFamily: 'Playfair Display' }}>
+                      {pnl?.summary?.is_profit ? 'NET PROFIT' : 'NET LOSS'}
+                    </td>
+                    <td className={`px-6 py-4 text-right font-mono text-lg font-bold ${pnl?.summary?.is_profit ? 'text-[#588157]' : 'text-[#BC4749]'}`}>
+                      {pnl?.summary?.is_profit ? '+' : '−'} ₹{Math.abs(pnl?.summary?.net_profit_loss || 0).toLocaleString()}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
+          {/* Extra context: outstanding receivables + sources */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card data-testid="pnl-outstanding-card">
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Outstanding Receivables</CardTitle></CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-[#D4A373]">₹{(pnl?.revenue?.outstanding || 0).toLocaleString()}</p>
+                <p className="text-xs text-[#6B7280] mt-1">Billed ₹{(pnl?.revenue?.total_billed || 0).toLocaleString()} · Collected ₹{(pnl?.revenue?.total_collected || 0).toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card data-testid="pnl-sources-card">
+              <CardHeader className="pb-2"><CardTitle className="text-sm">Data Sources feeding this P&L</CardTitle></CardHeader>
+              <CardContent>
+                <ul className="text-xs text-[#6B7280] space-y-1">
+                  <li>• <strong>{pnl?.entries?.bill_count || 0}</strong> bills (auto-flow on payment)</li>
+                  <li>• <strong>{pnl?.entries?.salary_payment_count || 0}</strong> salary payments (auto-flow from HR)</li>
+                  <li>• <strong>{pnl?.entries?.expense_count || 0}</strong> manual expense entries (electricity, mess, medicine purchase, misc)</li>
+                </ul>
+                <p className="text-[11px] text-[#8B95A1] italic mt-2">Every new bill, salary payment or expense recorded appears here instantly — no closing cycle needed.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         {/* Financial Report Tab */}
         <TabsContent value="financial" className="space-y-6">

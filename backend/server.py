@@ -1,5 +1,6 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -19,19 +20,61 @@ import io
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# MongoDB connection - graceful handling for deployment
+mongo_url = os.environ.get('MONGO_URL', '')
+if not mongo_url:
+    print("WARNING: MONGO_URL not set. Database features will not work.")
+    mongo_url = 'mongodb://localhost:27017'
+
+try:
+    client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
+    db_name = os.environ.get('DB_NAME', 'tatva_ayurved')
+    db = client[db_name]
+    print(f"MongoDB client initialized for database: {db_name}")
+except Exception as e:
+    print(f"ERROR initializing MongoDB client: {e}")
+    client = AsyncIOMotorClient('mongodb://localhost:27017')
+    db = client['tatva_ayurved']
 
 # JWT Configuration
-JWT_SECRET = os.environ['JWT_SECRET']
+JWT_SECRET = os.environ.get('JWT_SECRET', 'change-this-secret-in-production')
+if JWT_SECRET == 'change-this-secret-in-production':
+    print("WARNING: Using default JWT_SECRET. Set JWT_SECRET environment variable for production.")
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION_HOURS = 24
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 security = HTTPBearer()
+
+# Global exception handler - ensures CORS headers are always sent
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    origin = request.headers.get("origin", "*")
+    cors_origins_env = os.environ.get('CORS_ORIGINS', '*')
+    allowed_origin = "*"
+    if cors_origins_env != '*':
+        origins_list = [o.strip() for o in cors_origins_env.split(',')]
+        if origin in origins_list:
+            allowed_origin = origin
+    
+    headers = {
+        "Access-Control-Allow-Origin": allowed_origin,
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
+    
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=headers
+        )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"},
+        headers=headers
+    )
 
 @app.get("/api/health")
 async def health_check():
@@ -103,6 +146,9 @@ class PatientResponse(BaseModel):
     admission_date: Optional[str] = None
     priority: Optional[str] = "normal"
     queue_status: Optional[str] = None
+    prakriti_assessment: Optional[dict] = None
+    prakriti_assessment_at: Optional[str] = None
+    prakriti_assessment_by: Optional[str] = None
     created_at: str
 
 class CheckInRequest(BaseModel):
@@ -1859,7 +1905,7 @@ class SalaryPaymentCreate(BaseModel):
     notes: Optional[str] = ""
 
 class ExpenseCreate(BaseModel):
-    category: str  # utilities, maintenance, supplies, equipment, rent, other
+    category: str  # electricity, mess, misc, utilities, maintenance, supplies, equipment, rent, medicine_purchase, other
     description: str
     amount: float
     date: str
@@ -2218,6 +2264,114 @@ async def delete_expense(expense_id: str, current_user: dict = Depends(get_curre
     return {"message": "Expense deleted"}
 
 # ==================== ENHANCED FINANCIAL REPORTS ====================
+
+@api_router.get("/reports/pnl")
+async def get_pnl_statement(start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: dict = Depends(require_reports_access)):
+    """Profit & Loss statement — real-time aggregation from bills, inventory costs, expenses, salaries."""
+    # Build a single shared date filter
+    date_filter = {}
+    if start_date:
+        date_filter['$gte'] = start_date
+    if end_date:
+        date_filter['$lte'] = end_date
+
+    # ---- REVENUE ----
+    bill_query = {'created_at': date_filter} if date_filter else {}
+    bills = await db.bills.find(bill_query, {'_id': 0}).to_list(5000)
+
+    total_billed = sum(b.get('total_amount', 0) or 0 for b in bills)
+    total_collected = sum(b.get('paid_amount', 0) or 0 for b in bills)
+
+    # Break down billing into sources
+    medicine_sales = 0.0
+    medicine_cogs = 0.0  # cost of medicines actually sold
+    treatment_revenue = 0.0
+    room_revenue = 0.0
+    bill_profit_explicit = 0.0
+
+    for b in bills:
+        treatment_revenue += b.get('treatment_charges', 0) or 0
+        room_revenue += b.get('room_charges', 0) or 0
+        bill_profit_explicit += b.get('total_profit', 0) or 0
+        for item in b.get('items', []):
+            qty = float(item.get('quantity', 0) or 0)
+            sale_price = float(item.get('sale_price', item.get('price', 0)) or 0)
+            purchase_price = float(item.get('purchase_price', 0) or 0)
+            medicine_sales += qty * sale_price
+            medicine_cogs += qty * purchase_price
+
+    patient_billing_revenue = max(total_billed - medicine_sales, 0)
+    medicine_profit = bill_profit_explicit if bill_profit_explicit > 0 else (medicine_sales - medicine_cogs)
+
+    # ---- EXPENSES ----
+    expense_query = {'date': date_filter} if date_filter else {}
+    expense_docs = await db.expenses.find(expense_query, {'_id': 0}).to_list(5000)
+
+    expense_by_category = {}
+    for e in expense_docs:
+        cat = (e.get('category') or 'other').lower()
+        expense_by_category[cat] = expense_by_category.get(cat, 0) + float(e.get('amount', 0) or 0)
+
+    # Salary expense
+    salary_query = {}
+    if start_date or end_date:
+        salary_query['payment_date'] = {}
+        if start_date:
+            salary_query['payment_date']['$gte'] = start_date
+        if end_date:
+            salary_query['payment_date']['$lte'] = end_date
+    salary_payments = await db.salary_payments.find(salary_query, {'_id': 0}).to_list(5000)
+    salary_expense = sum(p.get('net_amount', 0) or 0 for p in salary_payments)
+
+    # Standardised expense buckets for the P&L layout
+    mess_expense = expense_by_category.get('mess', 0)
+    electricity_expense = expense_by_category.get('electricity', 0) + expense_by_category.get('utilities', 0)
+    medicine_purchase_expense = expense_by_category.get('medicine_purchase', 0)
+    # "Other manual" = everything not already surfaced explicitly
+    explicit_cats = {'mess', 'electricity', 'utilities', 'medicine_purchase'}
+    misc_expense = sum(v for k, v in expense_by_category.items() if k not in explicit_cats)
+
+    total_revenue = total_collected  # realised revenue basis
+    total_expense = salary_expense + mess_expense + electricity_expense + medicine_purchase_expense + misc_expense
+    net_pnl = total_revenue - total_expense
+
+    return {
+        'period': {'start': start_date, 'end': end_date},
+        'revenue': {
+            'patient_billing': round(patient_billing_revenue, 2),
+            'medicine_sales': round(medicine_sales, 2),
+            'medicine_profit': round(medicine_profit, 2),
+            'treatment_revenue': round(treatment_revenue, 2),
+            'room_revenue': round(room_revenue, 2),
+            'total_billed': round(total_billed, 2),
+            'total_collected': round(total_collected, 2),
+            'outstanding': round(total_billed - total_collected, 2),
+            'total': round(total_revenue, 2),
+        },
+        'expenses': {
+            'medicine_purchase': round(medicine_purchase_expense, 2),
+            'medicine_cogs_from_sales': round(medicine_cogs, 2),
+            'mess': round(mess_expense, 2),
+            'electricity': round(electricity_expense, 2),
+            'salary': round(salary_expense, 2),
+            'misc': round(misc_expense, 2),
+            'by_category': expense_by_category,
+            'total': round(total_expense, 2),
+        },
+        'summary': {
+            'total_revenue': round(total_revenue, 2),
+            'total_expense': round(total_expense, 2),
+            'net_profit_loss': round(net_pnl, 2),
+            'is_profit': net_pnl >= 0,
+        },
+        'entries': {
+            # Raw counts so the UI can show "N bills, M expenses, K salary payments feeding this P&L"
+            'bill_count': len(bills),
+            'expense_count': len(expense_docs),
+            'salary_payment_count': len(salary_payments),
+        }
+    }
+
 
 @api_router.get("/reports/financial")
 async def get_financial_report(start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: dict = Depends(require_reports_access)):
@@ -2946,6 +3100,14 @@ async def get_patient_billing_summary(patient_id: str, current_user: dict = Depe
 
 # Include router AFTER all routes are defined
 app.include_router(api_router)
+
+# Register AI Agents (Phase 1: Intake, Prakriti, Knowledge, Review Queue)
+try:
+    from ai_agents import register_ai_router
+    register_ai_router(app, db, get_current_user)
+    print("AI Agents registered: /api/ai/*")
+except Exception as e:
+    print(f"WARNING: AI Agents not registered: {e}")
 
 # CORS Configuration - handle credentials properly
 cors_origins_env = os.environ.get('CORS_ORIGINS', '*')

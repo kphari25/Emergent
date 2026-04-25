@@ -17,7 +17,8 @@ import {
   Bed,
   UserPlus,
   MessageSquare,
-  Stethoscope
+  Stethoscope,
+  Sparkles
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ const allNavItems = [
   { path: '/appointments', label: 'Appointments', icon: Calendar, restricted: false },
   { path: '/rooms', label: 'Rooms', icon: Bed, restricted: false },
   { path: '/therapies', label: 'Therapies', icon: Stethoscope, restricted: false },
+  { path: '/ai-assist', label: 'AI Assist', icon: Sparkles, restricted: false },
   { path: '/billing', label: 'Billing', icon: Receipt, restricted: false },
   { path: '/mess', label: 'Mess', icon: UtensilsCrossed, restricted: false },
   { path: '/leads', label: 'Leads', icon: UserPlus, restricted: false },

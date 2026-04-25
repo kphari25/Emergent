@@ -209,6 +209,7 @@ REACT_APP_BACKEND_URL=https://tatva-ayurved-api.onrender.com
    - **Root Directory**: `frontend`
    - **Build Command**: `yarn build` (or `CI=false yarn build`)
    - **Output Directory**: `build`
+   - **Install Command** *(optional but recommended)*: `yarn install` — Vercel auto-detects `yarn.lock`, but setting this explicitly avoids npm peer-dep errors like `ERESOLVE date-fns@4 vs react-day-picker`. A `.npmrc` with `legacy-peer-deps=true` is already shipped in `frontend/` as a safety net in case Vercel falls back to npm.
 5. Click **"Environment Variables"** and add:
 
    | Key | Value |

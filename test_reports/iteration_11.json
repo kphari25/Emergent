@@ -1,0 +1,43 @@
+{
+  "summary": "Phase 1 AI Agents (Intake / Prakriti / Knowledge / Review Queue) end-to-end tested. Backend pytest: 23/23 passed including live LLM calls (Claude 4.5 + Gemini 2.5 Pro vision on a synthesized tongue JPEG). Frontend: all 4 AI Assist tabs functional for admin, share-link copies public URL with token, Prakriti dosha bars render, Knowledge Q&A returns formatted answer (1633 chars), review dialog reject+approve works, public intake /intake/:id?token=xxx loads, bad token shows error. RBAC: non-admin 403 on review-queue confirmed. Regression: login, patients, rooms POST, therapy-schedules, bills all green.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/patients/{id}", "issue": "After approving a Prakriti analysis, `prakriti_assessment` is written to the patients collection in MongoDB but the field is NOT returned by GET /api/patients/{id} because PatientResponse pydantic model does not declare it. Frontend patient charts will not see the approved assessment via this endpoint. Add `prakriti_assessment`, `prakriti_assessment_at`, `prakriti_assessment_by` to PatientResponse."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AIAssist dialogs (share link + review)", "issues": ["Radix Dialog console warning: Missing `Description`/`aria-describedby` for DialogContent — add <DialogDescription> for a11y compliance. Non-blocking."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_ai_agents.py",
+    "/app/test_reports/pytest/pytest_ai_agents.xml"
+  ],
+  "action_items": [
+    "Add prakriti_assessment fields to PatientResponse in /app/backend/server.py so approved assessments are visible through GET /api/patients/{id}.",
+    "(Cosmetic) Wrap DialogContent with DialogDescription in AIAssist share-link and review-queue dialogs to silence a11y warning.",
+    "(Cosmetic) Login form redirects to `/` instead of `/dashboard` on success — existing behaviour, not introduced by this feature, but worth noting for consistency."
+  ],
+  "critical_code_review_comments": [
+    "ai_agents.py: `_handle_intake_submit` has no auth check for the staff (non-public) path — relies on `Depends(current_user_dep)` at the router decorator only, OK. But anybody logged in can submit ANY session regardless of `created_by`. Consider adding `if session['created_by'] != user['id'] and user['role'] not in ['admin','doctor']: raise 403` for data isolation.",
+    "ai_agents.py line 415-424: `action='edit'` uses `updates['result'] = req.edited_result` but this key is then reused in `final_result = updates.get('result') or doc.get('result')` — works, but clarity-wise consider pulling out `edited_result` handling into a separate branch.",
+    "ai_agents.py line 368: LLM non-JSON responses return 502 with a 300-char snippet of raw LLM output in the detail — OK in dev but could leak prompt fragments; trim further in prod.",
+    "ai_agents.py `_new_chat` instantiates a fresh LlmChat every turn with session_id reuse — Emergent LlmChat manages history server-side, but `_handle_intake_message` also includes a recap in the prompt, causing potential double-history. Works, but may inflate tokens. Consider dropping the recap since `session_id` preserves context.",
+    "No rate limiting on /intake/start-public or /intake/message-public — a bad actor could enumerate session_ids (UUIDs are unguessable so low-risk) and flood the public endpoints. Add basic throttling.",
+    "server.py line ~2995: the late `from ai_agents import register_ai_router` at module bottom means ai_router registration happens on import, acceptable."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_ai_agents.py (new)"
+  ],
+  "success_rate": {"backend": "100% (23/23)", "frontend": "100% happy paths (admin tabs + public intake + RBAC 403)"},
+  "test_credentials": {"admin": "admin@ayurcare.com / admin1234"},
+  "seed_data_creation": "Test fixtures created TEST_* intake sessions, TEST_PrakritiPt patient (phone randomised to avoid collision), TEST_ prakriti analyses, and a throwaway e2e_staff_* user for RBAC.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Phase 1 AI Agents are fully wired and live-LLM verified. ai_router prefix is /api/ai. Staff intake APIs require auth; patient-self (`-public`) APIs gate on matching public_token. Prakriti vision picks gemini-2.5-pro only when an image is supplied; text-only uses claude-sonnet-4-5-20250929. Approve action writes to `patients` collection (verified via mongo) but GET /api/patients/{id} pydantic response model currently hides `prakriti_assessment` — next agent should validate this is fixed by checking that field surfaces in the patients API response. Keep LLM test count low (each prakriti/intake call = credits).",
+  "rca of the issue": "test_approve_writes_to_patient initially failed because the test asserted on HTTP GET /api/patients/{id} but PatientResponse pydantic model filters out unknown fields. Direct MongoDB check confirmed the backend IS persisting prakriti_assessment correctly. Fix: update PatientResponse to declare the assessment fields."
+}
